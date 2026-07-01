@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="학생관리">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2a2620">
+<meta name="format-detection" content="telephone=no">
+<title>학생 종합 관리</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#2a2620; --muted:#8a8578;
+  --line:#e7e3db; --accent:#c8663a; --accent2:#3a6ea5; --accent-soft:#f3e6df;
+  --good:#3f7d5a; --danger:#c0483c; --warn:#b8862f; --chip:#efece5;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+h1,h2,h3{margin:0}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.side{width:190px;background:#2a2620;color:#e9e5dd;padding:18px 0;position:sticky;top:0;height:100vh;flex-shrink:0}
+.side .logo{font-size:16px;font-weight:700;padding:0 20px 16px;color:#fff}
+.side .logo small{display:block;font-weight:400;color:#b3ab9c;font-size:11px;margin-top:3px}
+.nav a{display:block;padding:11px 20px;color:#cfc8ba;text-decoration:none;font-size:14px;border-left:3px solid transparent}
+.nav a:hover{background:#3a352d;color:#fff}
+.nav a.active{background:#3a352d;color:#fff;border-left-color:var(--accent)}
+.side .foot{position:absolute;bottom:14px;left:0;right:0;padding:0 20px;font-size:11px;color:#8f887a}
+/* Main */
+.main{flex:1;padding:26px 30px;max-width:1100px}
+.page{display:none}
+.page.active{display:block}
+.page h2{font-size:20px;margin-bottom:4px}
+.page .sub{color:var(--muted);margin-bottom:18px;font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:12px;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.btn{padding:8px 14px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.btn:hover{background:#f3f0ea}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#b3572f}
+.btn.blue{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.blue:hover{background:#31608f}
+.btn.ghost{background:transparent}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn.danger{color:var(--danger);border-color:#e6c4c0}
+.btn.danger:hover{background:#faeeec}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:12px;background:#faf8f4}
+tr:hover td{background:#fcfbf8}
+.chip{display:inline-block;background:var(--chip);border-radius:20px;padding:2px 9px;font-size:11px;margin:1px 2px;color:#5a5446}
+.chip.sub{background:var(--accent-soft);color:var(--accent)}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.tag.auto{background:#e7f0e9;color:var(--good)}
+.tag.man{background:#fdf1e3;color:var(--warn)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.money{font-variant-numeric:tabular-nums;font-weight:600}
+.mini{width:110px}
+.miniw{width:78px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:6px;background:#faf8f4;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.totbar{display:flex;gap:22px;flex-wrap:wrap;background:#2f2a23;color:#fff;border-radius:12px;padding:14px 18px;margin:14px 0}
+.totbar .t{font-size:12px;color:#bdb5a5}
+.totbar .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.totbar .v.accent{color:#ffb37a}
+textarea.msg{width:100%;min-height:180px;font-family:"SFMono-Regular",Menlo,Consolas,monospace;font-size:12.5px;white-space:pre;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfaf7}
+.checkline{display:flex;align-items:center;gap:8px}
+.empty{color:var(--muted);text-align:center;padding:26px;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.subjbox{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.subjtoggle{border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 12px;font-size:12.5px;color:#5a5446}
+.subjtoggle.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#2a2620;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast.show{opacity:1}
+.inactive td{opacity:.5}
+.settrow{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.settrow label{width:170px;font-size:13px;color:#5a5446;font-weight:600}
+.settrow input{width:130px;padding:7px 9px;border:1px solid var(--line);border-radius:8px}
+.small{font-size:12px;color:var(--muted)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:22px;width:560px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal h3{margin-bottom:14px;font-size:17px}
+.modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.qbtn{padding:4px 10px;border:1px dashed var(--line);background:#fff;border-radius:16px;font-size:12px;color:#5a5446}
+.qbtn:hover{border-color:var(--accent);color:var(--accent)}
+select.mini,input.mini{padding:6px 8px}
+.badgeN{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700}
+@media(max-width:820px){.side{width:150px}.grid2{grid-template-columns:1fr}}
+@media(max-width:760px){
+  .app{flex-direction:column}
+  .side{width:100%;height:auto;position:sticky;top:0;padding:6px 8px;z-index:30}
+  .side .logo{padding:2px 8px;font-size:15px}
+  .side .logo small{display:inline;margin-left:8px;margin-top:0;font-size:11px}
+  .nav{display:flex;overflow-x:auto;gap:2px;-webkit-overflow-scrolling:touch}
+  .nav a{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;padding:9px 13px}
+  .nav a.active{border-left:none;border-bottom-color:var(--accent);background:#3a352d}
+  .side .foot{position:static;padding:3px 8px 0;font-size:10px;text-align:left}
+  .main{padding:14px 12px;max-width:100%}
+  .page h2{font-size:18px}
+  .card{padding:14px}
+  .grid2{grid-template-columns:1fr}
+  .card .field{flex:1 1 100%}
+  .card .field>input,.card .field>select,.card .field>textarea{width:100%}
+  .mini,.miniw{width:100%}
+  [id$="Wrap"]{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .card table{min-width:600px}
+  .settrow label{width:100%}
+  .settrow input{width:100%!important}
+  .btn{padding:10px 14px}
+  .btn.sm{padding:7px 11px}
+  .totbar{gap:14px;padding:12px 14px}
+  .totbar .v{font-size:18px}
+  .modal{padding:16px}
+  .msg{white-space:pre-wrap;word-break:break-word}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo">학생 종합 관리<small id="acaName">우리 학원</small></div>
+    <nav class="nav" id="nav">
+      <a data-page="students" class="active">학생 관리</a>
+      <a data-page="monthly">월별 정산</a>
+      <a data-page="scores">성적 관리</a>
+      <a data-page="board">가채점표</a>
+      <a data-page="settings">설정 · 백업</a>
+    </nav>
+    <div class="foot"><span id="syncFoot">로컬 저장</span><br>설정에서 클라우드 동기화<br>연결을 권장합니다.</div>
+  </aside>
+
+  <main class="main">
+    <!-- ============ STUDENTS ============ -->
+    <section class="page active" id="page-students">
+      <h2>학생 관리</h2>
+      <div class="sub">학생을 추가하고 학년·학교·수강과목·수업 시작일을 관리합니다.</div>
+
+      <div class="card">
+        <h3 id="studFormTitle">＋ 학생 추가</h3>
+        <div class="row">
+          <div class="field"><label>이름</label><input id="s_name" placeholder="홍길동"></div>
+          <div class="field"><label>관</label><select id="s_hall"></select></div>
+          <div class="field"><label>학년</label>
+            <select id="s_grade">
+              <option>초3</option><option>초4</option><option>초5</option><option>초6</option>
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option selected>고1</option><option>고2</option><option>고3</option><option>N수</option>
+            </select>
+          </div>
+          <div class="field"><label>학교</label><input id="s_school" placeholder="○○고등학교" list="schoolList"></div>
+          <div class="field"><label>수업 요일(참고용)</label>
+            <select id="s_weekday">
+              <option value="">미지정</option>
+              <option value="0">일</option><option value="1">월</option><option value="2">화</option>
+              <option value="3">수</option><option value="4">목</option><option value="5">금</option><option value="6">토</option>
+            </select>
+          </div>
+          <div class="field"><label>수업 시작일</label><input id="s_start" type="date"></div>
+          <div class="field"><label>기본 월 수강료(원)</label><input id="s_tuition" type="number" class="mini" placeholder="예: 280000"></div>
+          <div class="field"><label>정산 그룹(선택)</label><input id="s_feegroup" placeholder="예: 고2 2과목" list="feeGroupList"></div>
+        </div>
+        <div class="hint">정산 그룹을 비우면 자동으로 <b>학년+관</b>(관 있으면) 또는 <b>학년+과목수</b>로 묶입니다. 예: 고1은 관을 지정 → "고1 1관", 고2는 관 비움 → "고2 2과목".</div>
+        <div class="field">
+          <label>수강 과목 <span class="small">(클릭해서 선택 · 여러 개 가능)</span></label>
+          <div class="subjbox" id="s_subjects"></div>
+        </div>
+        <div class="field">
+          <label>빠른 금액 <span class="small">(설정에서 등록 · 클릭하면 수강료 자동 입력)</span></label>
+          <div class="subjbox" id="s_presets"></div>
+        </div>
+        <div class="field"><label>메모(선택)</label><input id="s_memo" placeholder="예: 화 19:00반 / 형제할인"></div>
+        <input type="hidden" id="s_editid">
+        <div class="row">
+          <button class="btn primary" onclick="saveStudent()">저장</button>
+          <button class="btn ghost" id="s_cancel" style="display:none" onclick="resetStudentForm()">취소</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h3 style="margin:0">학생 목록 <span class="badgeN" id="studCount">0</span></h3>
+          <div class="row" style="margin:0">
+            <input id="studSearch" class="mini" placeholder="이름/학교 검색" oninput="renderStudents()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+            <select id="studFilterHall" class="mini" onchange="renderStudents()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
+            <select id="studFilterActive" class="mini" onchange="renderStudents()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+              <option value="active">재원생만</option>
+              <option value="all">전체</option>
+              <option value="inactive">퇴원생만</option>
+            </select>
+          </div>
+        </div>
+        <div id="studTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- ============ MONTHLY ============ -->
+    <section class="page" id="page-monthly">
+      <h2>월별 정산</h2>
+      <div class="sub">달을 선택하면 재원생이 자동으로 나타납니다. 시작일 기준으로 수업 횟수(n/4)가 자동 계산되며, 필요하면 수정할 수 있습니다.</div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <div class="row" style="margin:0;align-items:center">
+            <div class="field" style="margin:0"><label>정산 월</label>
+              <input id="m_month" type="month" onchange="renderMonthly()">
+            </div>
+            <div class="field" style="margin:0"><label>관</label>
+              <select id="m_hall" onchange="renderMonthly()"></select>
+            </div>
+            <button class="btn sm" onclick="shiftMonth(-1)">◀ 이전달</button>
+            <button class="btn sm" onclick="shiftMonth(1)">다음달 ▶</button>
+            <button class="btn sm" onclick="copyPrevMonth()" title="지난달 등록/금액을 이번달로 복사">지난달 불러오기</button>
+          </div>
+          <div class="row" style="margin:0">
+            <button class="btn sm" onclick="exportMonthExcel()">이 달 엑셀</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>학생별 정산 <span class="small">— 체크 = 이번달 등록. 금액/횟수는 수정 가능</span></h3>
+        <div id="monthlyTableWrap"></div>
+        <div class="totbar" id="monthTotals"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">📋 실장님께 보낼 메시지</h3>
+          <div class="row" style="margin:0">
+            <label class="checkline small"><input type="checkbox" id="msgPerStudent" checked onchange="buildMessage()"> 학생 명단 포함</label>
+            <label class="checkline small"><input type="checkbox" id="msgShare" checked onchange="buildMessage()"> 정산액 표시</label>
+            <button class="btn primary sm" onclick="copyMessage()">복사하기</button>
+          </div>
+        </div>
+        <textarea class="msg" id="msgOut" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- ============ SCORES ============ -->
+    <section class="page" id="page-scores">
+      <h2>성적 관리</h2>
+      <div class="sub">학기별 중간·기말 점수를 모으고, 학생별 추이를 그래프로 봅니다.</div>
+
+      <div class="card">
+        <h3>＋ 점수 입력</h3>
+        <div class="row">
+          <div class="field"><label>학생</label><select id="sc_student"></select></div>
+          <div class="field"><label>연도</label><input id="sc_year" type="number" class="miniw" value="2026"></div>
+          <div class="field"><label>학년</label>
+            <select id="sc_grade">
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option selected>고1</option><option>고2</option><option>고3</option>
+            </select>
+          </div>
+          <div class="field"><label>학기</label><select id="sc_sem"><option value="1">1학기</option><option value="2">2학기</option></select></div>
+          <div class="field"><label>구분</label><select id="sc_exam"><option>중간</option><option>기말</option></select></div>
+          <div class="field"><label>과목</label><select id="sc_subject"></select></div>
+          <div class="field"><label>점수</label><input id="sc_score" type="number" class="miniw" placeholder="0~100"></div>
+          <div class="field"><label>&nbsp;</label><button class="btn primary" onclick="addScore()">추가</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="margin:0">추이 그래프</h3>
+          <div class="field" style="margin:0"><label>학생 선택</label><select id="chartStudent" onchange="renderChart()"></select></div>
+        </div>
+        <canvas id="scoreChart" height="110"></canvas>
+        <div id="chartEmpty" class="empty" style="display:none">선택한 학생의 점수가 없습니다.</div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">점수 기록</h3>
+          <select id="scoreFilterStudent" class="mini" onchange="renderScoreTable()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
+        </div>
+        <div id="scoreTableWrap"></div>
+      </div>
+    </section>
+
+    <!-- ============ BOARD (가채점표) ============ -->
+    <section class="page" id="page-board">
+      <h2>가채점표 만들기</h2>
+      <div class="sub">학원 게시판에 올릴 &lt;학교&gt; &lt;과목&gt; &lt;학기&gt; &lt;중간/기말&gt; 가채점표를 복사하기 쉽게 만듭니다.</div>
+
+      <div class="card">
+        <div class="row">
+          <div class="field"><label>연도</label><input id="b_year" type="number" class="miniw" value="2026"></div>
+          <div class="field"><label>관</label><select id="b_hall"></select></div>
+          <div class="field"><label>학교</label><select id="b_school"></select></div>
+          <div class="field"><label>과목</label><select id="b_subject"></select></div>
+          <div class="field"><label>학기</label><select id="b_sem"><option value="">전체</option><option value="1">1학기</option><option value="2">2학기</option></select></div>
+          <div class="field"><label>구분</label><select id="b_exam"><option value="">전체</option><option>중간</option><option>기말</option></select></div>
+          <div class="field"><label>정렬</label><select id="b_sort"><option value="score">점수 높은순</option><option value="name">이름순</option></select></div>
+          <div class="field"><label>&nbsp;</label><button class="btn blue" onclick="buildBoard()">표 생성</button></div>
+        </div>
+        <label class="checkline small" style="margin-top:6px"><input type="checkbox" id="b_stats" checked onclick="buildBoard()"> 평균·최고점 요약 포함</label>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0">미리보기</h3>
+          <button class="btn primary sm" onclick="copyBoard()">복사하기</button>
+        </div>
+        <textarea class="msg" id="boardOut" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="page" id="page-settings">
+      <h2>설정 · 백업</h2>
+      <div class="sub">클라우드 동기화, 정산 계산식, 과목, 빠른 금액을 설정하고 데이터를 백업합니다.</div>
+
+      <div class="card" id="cloudCard">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">☁ 클라우드 동기화 <span id="syncPill" class="tag man">미연결</span></h3>
+          <button class="btn sm" onclick="toggleCloudHelp()">설정 방법 보기 / 코드</button>
+        </div>
+        <div class="small" style="margin:8px 0">구글시트에 자동 저장되어 <b>어느 기기·브라우저에서 열어도 같은 데이터</b>가 나옵니다. 아래 [설정 방법 보기]를 먼저 따라 하세요.</div>
+        <div class="settrow"><label>웹앱 URL</label><input id="cl_url" style="width:min(360px,90%)" placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div class="settrow"><label>암호(선택)</label><input id="cl_token" style="width:200px" placeholder="코드의 TOKEN과 동일하게"></div>
+        <div class="settrow"><label>자동 동기화</label><span class="checkline"><input type="checkbox" id="cl_auto" style="width:auto"> <span class="small">변경할 때마다 자동 저장</span></span></div>
+        <div class="row">
+          <button class="btn" onclick="cloudConnect()">연결 저장·테스트</button>
+          <button class="btn blue" onclick="cloudPushManual()">⬆ 클라우드에 올리기</button>
+          <button class="btn" onclick="cloudPull(false)">⬇ 클라우드에서 불러오기</button>
+        </div>
+        <div id="cloudHelp" style="display:none">
+          <div class="divider"></div>
+          <b>최초 1회 설정 (약 10분, 한 번만)</b>
+          <ol class="small" style="line-height:1.9;padding-left:18px">
+            <li>구글드라이브(drive.google.com)에서 <b>새 구글 시트</b>를 만듭니다. (이름 예: 학생관리 데이터)</li>
+            <li>시트 상단 메뉴 <b>확장 프로그램 → Apps Script</b> 클릭.</li>
+            <li>편집기의 기본 코드를 <b>모두 지우고</b>, 아래 [코드 복사]로 복사해 <b>붙여넣기</b> 후 저장(💾).</li>
+            <li>(암호를 쓰려면) 코드 2번째 줄 <code>TOKEN=''</code>의 따옴표 안에 원하는 암호를 넣습니다.</li>
+            <li>오른쪽 위 <b>배포 → 새 배포</b> → 톱니바퀴에서 유형 <b>웹 앱</b> 선택.</li>
+            <li>실행 대상 <b>나</b>, 액세스 권한 <b>모든 사용자</b> → <b>배포</b>.</li>
+            <li>권한 요청이 뜨면 본인 구글 계정으로 <b>허용</b>.</li>
+            <li>표시된 <b>웹 앱 URL</b>(.../exec)을 복사해 위 <b>웹앱 URL</b> 칸에 붙여넣고, 암호를 썼다면 <b>암호</b>도 입력.</li>
+            <li><b>연결 저장·테스트</b> → 성공하면 <b>⬆ 클라우드에 올리기</b>로 지금 데이터를 올립니다.</li>
+            <li>다른 기기에서는 이 파일을 열고 같은 URL(+암호) 입력 후 <b>⬇ 클라우드에서 불러오기</b>. 이후엔 자동 동기화됩니다.</li>
+          </ol>
+          <div class="small" style="color:var(--warn)">⚠ 두 기기에서 <b>동시에</b> 편집하면 나중에 저장한 쪽이 덮어씁니다. 한 번에 한 기기에서만 편집하세요.</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <b>Apps Script 코드</b><button class="btn sm primary" onclick="copyAppsScript()">코드 복사</button>
+          </div>
+          <textarea class="msg" id="appsCode" readonly style="min-height:240px"></textarea>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>정산 계산식</h3>
+          <div class="small" style="margin-bottom:10px">계산 순서: (결제금액 − 공제) × 내 몫 비율 → 세금 차감 → 카드수수료 차감</div>
+          <div class="settrow"><label>학원 이름</label><input id="set_aca" style="width:200px"></div>
+          <div class="settrow"><label>공제액(원)</label><input id="set_ded" type="number"></div>
+          <div class="settrow"><label>내 몫 비율(5:5=0.5)</label><input id="set_split" type="number" step="0.01"></div>
+          <div class="settrow"><label>세금(3.3%=0.033)</label><input id="set_tax" type="number" step="0.001"></div>
+          <div class="settrow"><label>카드수수료(3%=0.03)</label><input id="set_card" type="number" step="0.001"></div>
+          <div class="settrow"><label>한 달 기준 주수</label><input id="set_spm" type="number"><span class="small">보통 4 (n/4 일할계산 분모)</span></div>
+          <button class="btn primary" onclick="saveSettings()">설정 저장</button>
+          <div class="divider"></div>
+          <div class="small">미리보기 (결제 <b id="prevIn">200,000</b>원): 내 정산액 = <b id="prevOut" style="color:var(--accent)">-</b></div>
+          <div class="row" style="margin-top:8px">
+            <input id="prevAmt" type="number" class="mini" value="200000" oninput="previewCalc()" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px">
+            <button class="btn sm" onclick="previewCalc()">계산</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>관 관리</h3>
+          <div class="small" style="margin-bottom:8px">1관·2관·3관처럼 학생을 나눌 캠퍼스/반을 설정합니다.</div>
+          <div class="subjbox" id="hallManage" style="margin-bottom:10px"></div>
+          <div class="row">
+            <input id="newHall" placeholder="새 관 (예: 4관)" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+            <button class="btn" onclick="addHall()">＋ 관 추가</button>
+          </div>
+          <div class="divider"></div>
+          <h3>과목 관리</h3>
+          <div class="subjbox" id="subjManage" style="margin-bottom:10px"></div>
+          <div class="row">
+            <input id="newSubject" placeholder="새 과목 (예: 물리)" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+            <button class="btn" onclick="addSubject()">＋ 과목 추가</button>
+          </div>
+          <div class="divider"></div>
+          <h3>빠른 금액 버튼</h3>
+          <div class="small" style="margin-bottom:8px">자주 쓰는 수강료를 등록하면 학생/월정산에서 한 번에 입력됩니다.</div>
+          <div id="presetManage"></div>
+          <div class="row" style="margin-top:8px">
+            <input id="newPresetLabel" placeholder="이름 (예: 고2 2과목)" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:140px">
+            <input id="newPresetAmt" type="number" placeholder="금액" class="mini" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+            <button class="btn" onclick="addPreset()">＋ 추가</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>데이터 백업 / 복원</h3>
+        <div class="small" style="margin-bottom:10px">데이터는 이 브라우저에만 저장됩니다. 컴퓨터를 바꾸거나 브라우저 정리 시 사라질 수 있으니 <b>정기적으로 백업 파일을 내려받으세요.</b></div>
+        <div class="row">
+          <button class="btn primary" onclick="exportBackup()">⬇ 백업 내보내기 (.json)</button>
+          <label class="btn" style="margin:0">⬆ 백업 불러오기<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"></label>
+          <button class="btn blue" onclick="exportAllExcel()">⬇ 전체 엑셀 내보내기 (.xlsx)</button>
+          <button class="btn danger" onclick="resetAll()">전체 초기화</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<datalist id="schoolList"></datalist>
+<datalist id="feeGroupList"></datalist>
+<div class="toast" id="toast"></div>
+
+<!-- generic confirm modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="actions">
+      <button class="btn ghost" onclick="closeModal()">취소</button>
+      <button class="btn primary" id="modalOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= DATA LAYER ================= */
+const KEY='academy_data_v1';
+const WD=['일','월','화','수','목','금','토'];
+const defaultData=()=>({
+  settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4},
+  subjects:['수학','영어','국어','과학'],
+  halls:['1관','2관','3관'],
+  presets:[],
+  students:[],
+  monthly:{},   // "YYYY-MM": { [studentId]: {enrolled,amount,sessions,sessionsAuto} }
+  scores:[]     // {id,studentId,year,gradeAtExam,semester,exam,subject,score}
+});
+let data=load();
+let suppressPush=false;
+const CLOUD_KEY='academy_cloud_v1';
+let cloud=loadCloud();
+function loadCloud(){try{const r=localStorage.getItem(CLOUD_KEY);if(r)return Object.assign({url:'',token:'',auto:true},JSON.parse(r));}catch(e){}return{url:'',token:'',auto:true};}
+function saveCloud(){localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));}
+function load(){
+  try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);return Object.assign(defaultData(),d);}}catch(e){}
+  return defaultData();
+}
+function save(){
+  if(!suppressPush) data.updatedAt=Date.now();
+  localStorage.setItem(KEY,JSON.stringify(data));
+  if(!suppressPush) schedulePush();
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+/* ================= HELPERS ================= */
+const won=n=>Math.round(n||0).toLocaleString('ko-KR');
+const $=id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);}
+function todayMonth(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function studentById(id){return data.students.find(s=>s.id===id);}
+
+/* count weekly class sessions in a given month */
+function countClassDays(year,month/*1-12*/,weekday,fromDay){
+  if(weekday===''||weekday===null||weekday===undefined) return null;
+  weekday=Number(weekday);
+  const last=new Date(year,month,0).getDate();
+  let c=0;
+  for(let d=fromDay;d<=last;d++){ if(new Date(year,month-1,d).getDay()===weekday) c++; }
+  return c;
+}
+/* 시작한 달의 '몇 주차 시작'으로 n/4 산정 (주2·3회여도 비율은 동일, 과목수는 가격만 좌우) */
+function autoSessions(stu,ym){
+  const [y,m]=ym.split('-').map(Number);
+  const spm=data.settings.sessionsPerMonth||4;
+  if(!stu.startDate) return spm;
+  const [sy,sm,sd]=stu.startDate.split('-').map(Number);
+  const startYM=sy*100+sm, curYM=y*100+m;
+  if(curYM<startYM) return 0;      // 아직 시작 전
+  if(curYM>startYM) return spm;    // 이전 달에 시작 → 전액(full)
+  const weekOfMonth=Math.ceil(sd/7);   // 1~5주차
+  let w=spm-(weekOfMonth-1);
+  if(w<1)w=1; if(w>spm)w=spm;
+  return w;                        // 예: 23일(4주차)=1/4, 7일(1주차)=4/4
+}
+
+/* ================= SETTLEMENT ================= */
+function calcShare(payment){
+  const s=data.settings;
+  const afterDed=Math.max(0,(payment||0)-s.deduction);
+  const afterSplit=afterDed*s.splitRatio;
+  const afterTax=afterSplit*(1-s.taxRate);
+  const afterCard=afterTax*(1-s.cardRate);
+  return Math.round(afterCard);
+}
+
+/* ================= NAV ================= */
+document.querySelectorAll('#nav a').forEach(a=>{
+  a.onclick=()=>{
+    document.querySelectorAll('#nav a').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    $('page-'+a.dataset.page).classList.add('active');
+    if(a.dataset.page==='monthly')renderMonthly();
+    if(a.dataset.page==='scores'){fillScoreSelectors();renderScoreTable();renderChart();}
+    if(a.dataset.page==='board')fillBoardSelectors();
+    if(a.dataset.page==='settings')renderSettings();
+  };
+});
+
+/* ================= STUDENTS ================= */
+let selectedSubjects=[];
+function renderSubjectToggles(){
+  const box=$('s_subjects');box.innerHTML='';
+  data.subjects.forEach(sub=>{
+    const b=document.createElement('button');
+    b.type='button';b.className='subjtoggle'+(selectedSubjects.includes(sub)?' on':'');
+    b.textContent=sub;
+    b.onclick=()=>{
+      if(selectedSubjects.includes(sub))selectedSubjects=selectedSubjects.filter(x=>x!==sub);
+      else selectedSubjects.push(sub);
+      renderSubjectToggles();
+    };
+    box.appendChild(b);
+  });
+  const add=document.createElement('button');
+  add.type='button';add.className='qbtn';add.textContent='＋ 과목';
+  add.onclick=()=>{const n=prompt('추가할 과목명');if(n&&n.trim()){if(!data.subjects.includes(n.trim())){data.subjects.push(n.trim());save();}selectedSubjects.push(n.trim());renderSubjectToggles();}};
+  box.appendChild(add);
+}
+function renderPresetChips(){
+  const box=$('s_presets');box.innerHTML='';
+  if(!data.presets.length){box.innerHTML='<span class="small">설정에서 빠른 금액을 등록하세요.</span>';return;}
+  data.presets.forEach(p=>{
+    const b=document.createElement('button');b.type='button';b.className='qbtn';
+    b.textContent=`${p.label} · ${won(p.amount)}원`;
+    b.onclick=()=>{$('s_tuition').value=p.amount;};
+    box.appendChild(b);
+  });
+}
+function saveStudent(){
+  const name=$('s_name').value.trim();
+  if(!name){toast('이름을 입력하세요');return;}
+  const editid=$('s_editid').value;
+  const obj={
+    name, hall:$('s_hall').value, grade:$('s_grade').value, school:$('s_school').value.trim(),
+    subjects:[...selectedSubjects],
+    weekday:$('s_weekday').value, startDate:$('s_start').value,
+    baseTuition:Number($('s_tuition').value)||0, feeGroup:$('s_feegroup').value.trim(), memo:$('s_memo').value.trim()
+  };
+  if(editid){Object.assign(studentById(editid),obj);toast('수정되었습니다');}
+  else{data.students.push(Object.assign({id:uid(),active:true},obj));toast('학생이 추가되었습니다');}
+  save();resetStudentForm();renderStudents();refreshSchoolList();
+}
+function editStudent(id){
+  const s=studentById(id);
+  $('s_editid').value=id;$('s_name').value=s.name;$('s_grade').value=s.grade;
+  $('s_hall').value=s.hall||'';$('s_school').value=s.school||'';$('s_weekday').value=s.weekday??'';
+  $('s_start').value=s.startDate||'';$('s_tuition').value=s.baseTuition||'';
+  $('s_feegroup').value=s.feeGroup||'';$('s_memo').value=s.memo||'';selectedSubjects=[...(s.subjects||[])];
+  renderSubjectToggles();
+  $('studFormTitle').textContent='✎ 학생 수정';$('s_cancel').style.display='';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetStudentForm(){
+  ['s_name','s_school','s_start','s_tuition','s_feegroup','s_memo','s_editid'].forEach(i=>$(i).value='');
+  $('s_grade').value='고1';$('s_weekday').value='';selectedSubjects=[];
+  if($('s_hall'))$('s_hall').value=(data.halls[0]||'');
+  renderSubjectToggles();$('studFormTitle').textContent='＋ 학생 추가';$('s_cancel').style.display='none';
+}
+function toggleActive(id){const s=studentById(id);s.active=!s.active;save();renderStudents();}
+function deleteStudent(id){
+  const s=studentById(id);
+  confirmModal('학생 삭제',`<b>${s.name}</b> 학생과 관련된 성적·월정산 기록이 모두 삭제됩니다. 계속할까요?`,()=>{
+    data.students=data.students.filter(x=>x.id!==id);
+    data.scores=data.scores.filter(x=>x.studentId!==id);
+    Object.values(data.monthly).forEach(mo=>{delete mo[id];});
+    save();renderStudents();toast('삭제되었습니다');
+  });
+}
+function renderStudents(){
+  const q=($('studSearch').value||'').toLowerCase();
+  const f=$('studFilterActive').value;
+  const hf=$('studFilterHall')?$('studFilterHall').value:'';
+  let list=data.students.filter(s=>{
+    if(f==='active'&&!s.active)return false;
+    if(f==='inactive'&&s.active)return false;
+    if(hf&&(s.hall||'')!==hf)return false;
+    if(q&&!(s.name.toLowerCase().includes(q)||(s.school||'').toLowerCase().includes(q)))return false;
+    return true;
+  });
+  $('studCount').textContent=data.students.filter(s=>s.active).length;
+  const wrap=$('studTableWrap');
+  if(!list.length){wrap.innerHTML='<div class="empty">학생이 없습니다. 위에서 추가하세요.</div>';return;}
+  let h='<table><thead><tr><th>이름</th><th>관</th><th>학년</th><th>학교</th><th>수강과목</th><th>수업요일</th><th>시작일</th><th class="num">기본수강료</th><th>상태</th><th></th></tr></thead><tbody>';
+  list.forEach(s=>{
+    h+=`<tr class="${s.active?'':'inactive'}">
+      <td><b>${esc(s.name)}</b><div class="small" style="color:var(--muted)">정산: ${esc(feeGroupOf(s))}</div>${s.memo?`<div class="small">${esc(s.memo)}</div>`:''}</td>
+      <td>${s.hall?`<span class="chip">${esc(s.hall)}</span>`:'-'}</td>
+      <td>${esc(s.grade)}</td><td>${esc(s.school||'-')}</td>
+      <td>${(s.subjects||[]).map(x=>`<span class="chip sub">${esc(x)}</span>`).join('')||'-'}</td>
+      <td>${s.weekday!==''&&s.weekday!=null?WD[s.weekday]+'요일':'-'}</td>
+      <td>${s.startDate||'-'}</td>
+      <td class="num money">${s.baseTuition?won(s.baseTuition):'-'}</td>
+      <td>${s.active?'<span class="tag auto">재원</span>':'<span class="tag man">퇴원</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn sm" onclick="editStudent('${s.id}')">수정</button>
+        <button class="btn sm" onclick="toggleActive('${s.id}')">${s.active?'퇴원':'복원'}</button>
+        <button class="btn sm danger" onclick="deleteStudent('${s.id}')">삭제</button>
+      </td></tr>`;
+  });
+  wrap.innerHTML=h+'</tbody></table>';
+}
+function refreshSchoolList(){
+  const set=[...new Set(data.students.map(s=>s.school).filter(Boolean))];
+  $('schoolList').innerHTML=set.map(s=>`<option value="${esc(s)}">`).join('');
+  const fg=[...new Set(data.students.map(feeGroupOf))].filter(Boolean);
+  if($('feeGroupList'))$('feeGroupList').innerHTML=fg.map(g=>`<option value="${esc(g)}">`).join('');
+}
+/* 정산 그룹: 지정값 우선, 없으면 학년+관(관 있으면) 또는 학년+과목수 */
+function feeGroupOf(s){
+  if(s.feeGroup&&s.feeGroup.trim())return s.feeGroup.trim();
+  let g=s.grade||'';
+  if(s.hall)g+=' '+s.hall;
+  else if((s.subjects||[]).length)g+=' '+s.subjects.length+'과목';
+  return g.trim()||'기타';
+}
+function manwon(n){ if(!n)return''; return (n%10000===0)?((n/10000)+'만원'):(won(n)+'원'); }
+function groupPrice(list){ const cnt={};let best=0,bv=0; list.forEach(s=>{const b=s.baseTuition||0;if(!b)return;cnt[b]=(cnt[b]||0)+1;if(cnt[b]>bv||(cnt[b]===bv&&b>best)){bv=cnt[b];best=b;}}); return best; }
+function gradeRank(g){const o=['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수'];const m=((g||'').match(/초\d|중\d|고\d|N수/)||[''])[0];const i=o.indexOf(m);return i<0?99:i;}
+/* ---- halls (관) ---- */
+function hallOptions(includeAll){
+  return (includeAll?'<option value="">전체 관</option>':'')+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');
+}
+function renderHallSelectors(){
+  const ids={s_hall:false,studFilterHall:true,m_hall:true,b_hall:true};
+  Object.entries(ids).forEach(([id,all])=>{const el=$(id);if(!el)return;const cur=el.value;el.innerHTML=hallOptions(all);
+    if([...el.options].some(o=>o.value===cur))el.value=cur;});
+}
+function renderHallManage(){
+  const box=$('hallManage');if(!box)return;box.innerHTML='';
+  data.halls.forEach(h=>{const c=document.createElement('span');c.className='chip';c.style.padding='4px 6px 4px 10px';
+    c.innerHTML=`${esc(h)} <button class="btn sm ghost" style="padding:0 5px;border:none;color:var(--danger)" onclick="removeHall('${esc(h)}')">×</button>`;
+    box.appendChild(c);});
+}
+function addHall(){const n=$('newHall').value.trim();if(!n)return;if(!data.halls.includes(n))data.halls.push(n);save();$('newHall').value='';renderHallManage();renderHallSelectors();toast('관이 추가되었습니다');}
+function removeHall(h){data.halls=data.halls.filter(x=>x!==h);save();renderHallManage();renderHallSelectors();}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ================= MONTHLY ================= */
+function getMonthRecords(ym){
+  if(!data.monthly[ym])data.monthly[ym]={};
+  const mo=data.monthly[ym];
+  // ensure active students have a record (enrolled by default if started on/before this month)
+  data.students.filter(s=>s.active).forEach(s=>{
+    if(!(s.id in mo)){
+      const sess=autoSessions(s,ym);
+      const started=!s.startDate|| (s.startDate.slice(0,7)<=ym);
+      mo[s.id]={enrolled:started&&sess>0,sessions:sess,sessionsAuto:true,amount:null};
+    }
+  });
+  return mo;
+}
+function shiftMonth(delta){
+  const [y,m]=$('m_month').value.split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  $('m_month').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  renderMonthly();
+}
+function copyPrevMonth(){
+  const ym=$('m_month').value;const [y,m]=ym.split('-').map(Number);
+  const prev=new Date(y,m-2,1);const pym=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
+  if(!data.monthly[pym]){toast('지난달 데이터가 없습니다');return;}
+  const mo=getMonthRecords(ym);
+  Object.entries(data.monthly[pym]).forEach(([sid,r])=>{
+    if(studentById(sid)&&r.enrolled){mo[sid]={enrolled:true,sessions:data.settings.sessionsPerMonth,sessionsAuto:false,amount:r.amount};}
+  });
+  save();renderMonthly();toast('지난달 등록을 불러왔습니다');
+}
+function effectiveAmount(stu,rec,ym){
+  if(rec.amount!=null&&rec.amount!=='')return Number(rec.amount);
+  const spm=data.settings.sessionsPerMonth||4;
+  const ratio=Math.min(rec.sessions,spm)/spm;
+  return Math.round((stu.baseTuition||0)*ratio);
+}
+function renderMonthly(){
+  if(!$('m_month').value)$('m_month').value=todayMonth();
+  const ym=$('m_month').value;
+  const mo=getMonthRecords(ym);
+  save();
+  const hall=$('m_hall')?$('m_hall').value:'';
+  const rows=data.students.filter(s=>(s.active||(mo[s.id]&&mo[s.id].enrolled))&&(!hall||(s.hall||'')===hall));
+  const wrap=$('monthlyTableWrap');
+  if(!rows.length){wrap.innerHTML='<div class="empty">재원생이 없습니다. 학생 관리에서 추가하세요.</div>';$('monthTotals').innerHTML='';buildMessage();return;}
+  const spm=data.settings.sessionsPerMonth||4;
+  let h='<table><thead><tr><th style="width:34px">등록</th><th>이름</th><th>관</th><th>학년</th><th>수강주수 /'+spm+'</th><th class="num">결제금액</th><th class="num">내 정산액</th><th>비고</th></tr></thead><tbody>';
+  rows.forEach(s=>{
+    const r=mo[s.id]||{enrolled:false,sessions:autoSessions(s,ym),sessionsAuto:true,amount:null};
+    const amt=effectiveAmount(s,r,ym);
+    const share=calcShare(amt);
+    const partial=r.sessions<spm;
+    const started=s.startDate&&s.startDate.slice(0,7)===ym;
+    const note=started?`${fmtStart(s.startDate)} 첫수업${partial?` ${r.sessions}/${spm}`:''}`:(partial?`${r.sessions}/${spm}`:'');
+    h+=`<tr class="${r.enrolled?'':'inactive'}">
+      <td><input type="checkbox" ${r.enrolled?'checked':''} onchange="setEnroll('${s.id}',this.checked)"></td>
+      <td><b>${esc(s.name)}</b></td><td>${s.hall?`<span class="chip">${esc(s.hall)}</span>`:'-'}</td><td>${esc(s.grade)}</td>
+      <td><input type="number" class="miniw" value="${r.sessions}" onchange="setSessions('${s.id}',this.value)"> ${r.sessionsAuto?'<span class="tag auto">자동</span>':'<span class="tag man">수정</span>'}</td>
+      <td class="num"><input type="number" class="mini num" value="${amt}" onchange="setAmount('${s.id}',this.value)"></td>
+      <td class="num money">${won(share)}</td>
+      <td class="small">${note?`<span class="chip">${note}</span> `:''}<input value="${esc(r.note||'')}" placeholder="비고" onchange="setNote('${s.id}',this.value)" style="width:100px;padding:5px 7px;border:1px solid var(--line);border-radius:6px"></td></tr>`;
+  });
+  wrap.innerHTML=h+'</tbody></table>';
+  renderTotals(ym);buildMessage();
+}
+function fmtStart(d){const[,m,day]=d.split('-');return `${Number(m)}/${Number(day)}`;}
+function setEnroll(id,v){getMonthRecords($('m_month').value)[id].enrolled=v;save();renderMonthly();}
+function setSessions(id,v){const r=getMonthRecords($('m_month').value)[id];r.sessions=Number(v)||0;r.sessionsAuto=false;save();renderMonthly();}
+function setAmount(id,v){const r=getMonthRecords($('m_month').value)[id];r.amount=(v===''?null:Number(v));save();renderMonthly();}
+function setNote(id,v){getMonthRecords($('m_month').value)[id].note=v;save();buildMessage();}
+function renderTotals(ym){
+  const mo=data.monthly[ym];const hall=$('m_hall')?$('m_hall').value:'';
+  let cnt=0,pay=0,share=0;const per={};
+  data.students.forEach(s=>{const r=mo[s.id];if(!r||!r.enrolled)return;if(hall&&(s.hall||'')!==hall)return;
+    const a=effectiveAmount(s,r,ym);const sh=calcShare(a);cnt++;pay+=a;share+=sh;
+    const h=s.hall||'미지정';(per[h]=per[h]||{cnt:0,share:0}).cnt++;per[h].share+=sh;});
+  let html=`
+    <div><div class="t">등록 학생 수</div><div class="v">${cnt}명</div></div>
+    <div><div class="t">총 결제금액</div><div class="v">${won(pay)}원</div></div>
+    <div><div class="t">내 정산액 합계</div><div class="v accent">${won(share)}원</div></div>`;
+  if(!hall&&Object.keys(per).length>1){
+    html+='<div style="width:100%;border-top:1px solid #4a443a;margin-top:6px;padding-top:8px;font-size:12px;color:#bdb5a5">관별 소계 — '+
+      Object.entries(per).map(([h,v])=>`${h}: ${v.cnt}명 / 정산 ${won(v.share)}원`).join('　·　')+'</div>';
+  }
+  $('monthTotals').innerHTML=html;
+}
+function buildMessage(){
+  const ym=$('m_month').value||todayMonth();const mo=data.monthly[ym]||{};
+  const m=Number(ym.split('-')[1]);
+  const hall=$('m_hall')?$('m_hall').value:'';
+  const showList=$('msgPerStudent').checked, showSettle=$('msgShare').checked;
+  const s=data.settings;const spm=s.sessionsPerMonth||4;
+  const enrolled=data.students.filter(st=>{const r=mo[st.id];return r&&r.enrolled&&(!hall||(st.hall||'')===hall);});
+  // 정산 그룹별 묶기
+  const groups={};const order=[];
+  enrolled.forEach(st=>{const k=feeGroupOf(st);if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(st);});
+  order.sort((a,b)=>gradeRank(a)-gradeRank(b)||a.localeCompare(b,'ko'));
+  let total=0,n=0;const perGrade={},perGradeSub={};const listLines=[];
+  order.forEach(k=>{
+    const arr=groups[k];const price=groupPrice(arr);
+    const names=arr.map(st=>{
+      const r=mo[st.id];const a=effectiveAmount(st,r,ym);total+=a;n++;
+      const gk=st.grade||'기타';perGrade[gk]=(perGrade[gk]||0)+a;
+      const sub=(k.indexOf(gk)===0)?(k.slice(gk.length).trim()||k):k;
+      perGradeSub[gk]=perGradeSub[gk]||{};perGradeSub[gk][sub]=(perGradeSub[gk][sub]||0)+1;
+      const started=st.startDate&&st.startDate.slice(0,7)===ym;
+      const partial=r.sessions<spm;
+      let inside=started?`${m}/${Number(st.startDate.split('-')[2])} 첫수업`+(partial?`(${r.sessions}/${spm}수업료)`:''):'';
+      const memo=(r.note||'').trim();if(memo)inside+=(inside?' ':'')+memo;
+      return inside?`${st.name}(${inside})`:st.name;
+    });
+    listLines.push(`- ${k}${price?`(${manwon(price)})`:''}: ${names.join(', ')}`);
+  });
+  const gradeKeys=Object.keys(perGrade).sort((a,b)=>gradeRank(a)-gradeRank(b));
+  const splitText=(s.splitRatio===0.5)?'5:5':`${Math.round(s.splitRatio*10)}:${10-Math.round(s.splitRatio*10)}`;
+  let out=`안녕하세요 선생님, ${m}월${hall?' '+hall:''} 수강 현황 및 정산 내용 전달드립니다. 결제당 ${won(s.deduction)}원 공제 후 ${splitText} 비율로 계산하였습니다.\n`;
+  if(showList){out+=`\n1) 학생 명단\n`+listLines.join('\n')+'\n';}
+  out+=`\n2) 수강 인원 (총 ${n}명)\n`;
+  gradeKeys.forEach(g=>{const subs=perGradeSub[g]||{};
+    const subStr=Object.entries(subs).map(([lb,c])=>`${lb} ${c}명`).join(', ');
+    const gTot=Object.values(subs).reduce((a,b)=>a+b,0);
+    out+=`- ${g}: ${subStr} (${gTot}명)\n`;});
+  out+=`\n3) 수강료\n`;
+  gradeKeys.forEach(g=>{out+=`- ${g} 합계: ${won(perGrade[g])}원\n`;});
+  out+=`- 전체 합계: ${won(total)}원\n`;
+  if(showSettle){
+    const settle=(total-s.deduction*n)*s.splitRatio;
+    const net=Math.round(settle*(1-s.taxRate)*(1-s.cardRate));
+    const cardP=Math.round(s.cardRate*1000)/10, taxP=Math.round(s.taxRate*1000)/10;
+    out+=`\n따라서, 이번 달 정산 금액은 ${won(settle)}원으로 계산되며, ${cardP}% 카드 수수료 공제와 ${taxP}% 공제 후 실수령액은 ${won(net)}원입니다. 확인 부탁드립니다.`;
+  }
+  $('msgOut').value=out;
+}
+function copyMessage(){copyText($('msgOut').value,'메시지를 복사했습니다');}
+
+/* ================= SCORES ================= */
+function fillScoreSelectors(){
+  const opts=data.students.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.hall?esc(s.hall)+' ':''}${esc(s.grade)})</option>`).join('');
+  $('sc_student').innerHTML=opts||'<option value="">학생 없음</option>';
+  $('sc_subject').innerHTML=data.subjects.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('chartStudent').innerHTML=opts||'<option value="">학생 없음</option>';
+  $('scoreFilterStudent').innerHTML='<option value="">전체 학생</option>'+opts;
+}
+function addScore(){
+  const sid=$('sc_student').value;if(!sid){toast('학생을 선택하세요');return;}
+  const score=Number($('sc_score').value);
+  if($('sc_score').value===''||isNaN(score)){toast('점수를 입력하세요');return;}
+  data.scores.push({id:uid(),studentId:sid,year:Number($('sc_year').value),gradeAtExam:$('sc_grade').value,
+    semester:$('sc_sem').value,exam:$('sc_exam').value,subject:$('sc_subject').value,score});
+  save();$('sc_score').value='';renderScoreTable();renderChart();toast('점수가 추가되었습니다');
+}
+function deleteScore(id){data.scores=data.scores.filter(s=>s.id!==id);save();renderScoreTable();renderChart();}
+function examOrder(sc){return sc.year*1000+Number(sc.semester)*10+(sc.exam==='중간'?1:2);}
+function examLabel(sc){return `${sc.year} ${sc.semester}학기 ${sc.exam}`;}
+function renderScoreTable(){
+  const fid=$('scoreFilterStudent').value;
+  let list=data.scores.slice();
+  if(fid)list=list.filter(s=>s.studentId===fid);
+  list.sort((a,b)=>examOrder(a)-examOrder(b)||a.subject.localeCompare(b.subject));
+  const wrap=$('scoreTableWrap');
+  if(!list.length){wrap.innerHTML='<div class="empty">점수 기록이 없습니다.</div>';return;}
+  let h='<table><thead><tr><th>학생</th><th>연도</th><th>학년</th><th>학기</th><th>구분</th><th>과목</th><th class="num">점수</th><th></th></tr></thead><tbody>';
+  list.forEach(s=>{const stu=studentById(s.studentId);
+    h+=`<tr><td>${stu?esc(stu.name):'(삭제됨)'}</td><td>${s.year}</td><td>${esc(s.gradeAtExam)}</td>
+      <td>${s.semester}학기</td><td>${esc(s.exam)}</td><td><span class="chip sub">${esc(s.subject)}</span></td>
+      <td class="num money">${s.score}</td>
+      <td><button class="btn sm danger" onclick="deleteScore('${s.id}')">삭제</button></td></tr>`;});
+  wrap.innerHTML=h+'</tbody></table>';
+}
+let chartObj=null;
+function renderChart(){
+  const sid=$('chartStudent').value;
+  const list=data.scores.filter(s=>s.studentId===sid);
+  const cv=$('scoreChart');
+  if(!list.length||typeof Chart==='undefined'){
+    if(chartObj){chartObj.destroy();chartObj=null;}
+    cv.style.display='none';$('chartEmpty').style.display='block';
+    $('chartEmpty').textContent=(typeof Chart==='undefined')?'그래프 라이브러리를 불러오지 못했습니다(인터넷 필요).':'선택한 학생의 점수가 없습니다.';
+    return;
+  }
+  cv.style.display='block';$('chartEmpty').style.display='none';
+  const labelsKey=[...new Set(list.map(examLabel))];
+  const keyOrder={};list.forEach(s=>keyOrder[examLabel(s)]=examOrder(s));
+  labelsKey.sort((a,b)=>keyOrder[a]-keyOrder[b]);
+  const subjects=[...new Set(list.map(s=>s.subject))];
+  const palette=['#c8663a','#3a6ea5','#3f7d5a','#b8862f','#8a5a9e','#c0483c','#4a8a8a'];
+  const datasets=subjects.map((sub,i)=>({
+    label:sub,
+    data:labelsKey.map(lb=>{const rec=list.find(s=>examLabel(s)===lb&&s.subject===sub);return rec?rec.score:null;}),
+    borderColor:palette[i%palette.length],backgroundColor:palette[i%palette.length],
+    tension:.25,spanGaps:true,pointRadius:4
+  }));
+  if(chartObj)chartObj.destroy();
+  chartObj=new Chart(cv,{type:'line',data:{labels:labelsKey,datasets},
+    options:{responsive:true,scales:{y:{suggestedMin:0,suggestedMax:100}},plugins:{legend:{position:'bottom'}}}});
+}
+
+/* ================= BOARD (가채점표) ================= */
+function fillBoardSelectors(){
+  const schools=[...new Set(data.students.map(s=>s.school).filter(Boolean))];
+  $('b_school').innerHTML='<option value="">전체 학교</option>'+schools.map(s=>`<option>${esc(s)}</option>`).join('');
+  $('b_subject').innerHTML='<option value="">전체 과목</option>'+data.subjects.map(s=>`<option>${esc(s)}</option>`).join('');
+  renderHallSelectors();
+}
+function buildBoard(){
+  const year=Number($('b_year').value),hall=$('b_hall').value,school=$('b_school').value,subject=$('b_subject').value,
+    sem=$('b_sem').value,exam=$('b_exam').value,sort=$('b_sort').value;
+  let list=data.scores.filter(sc=>{
+    const stu=studentById(sc.studentId);if(!stu)return false;
+    if(year&&sc.year!==year)return false;
+    if(hall&&(stu.hall||'')!==hall)return false;
+    if(school&&stu.school!==school)return false;
+    if(subject&&sc.subject!==subject)return false;
+    if(sem&&String(sc.semester)!==sem)return false;
+    if(exam&&sc.exam!==exam)return false;
+    return true;
+  }).map(sc=>({name:studentById(sc.studentId).name,score:sc.score,subject:sc.subject,exam:sc.exam,sem:sc.semester}));
+  if(sort==='score')list.sort((a,b)=>b.score-a.score);else list.sort((a,b)=>a.name.localeCompare(b.name));
+  const titleBits=[year+'년'];
+  if(hall)titleBits.push(hall);
+  if(school)titleBits.push(school);
+  if(subject)titleBits.push(subject);
+  if(sem)titleBits.push(sem+'학기');
+  if(exam)titleBits.push(exam);
+  titleBits.push('가채점');
+  let out=`[${titleBits.join(' ')}]\n`;
+  if(!list.length){out+='\n해당하는 점수가 없습니다.';$('boardOut').value=out;return;}
+  const showSub=!subject, showExam=(!exam||!sem);
+  list.forEach((r,i)=>{
+    let extra=[];if(showSub)extra.push(r.subject);if(showExam)extra.push(`${r.sem}학기 ${r.exam}`);
+    out+=`\n${String(i+1).padStart(2,' ')}. ${r.name}${extra.length?' ('+extra.join(' / ')+')':''}  ${r.score}점`;
+  });
+  if($('b_stats').checked){
+    const scores=list.map(r=>r.score);
+    const avg=(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1);
+    out+=`\n\n― 응시 ${scores.length}명 · 평균 ${avg}점 · 최고 ${Math.max(...scores)}점`;
+  }
+  $('boardOut').value=out;
+}
+function copyBoard(){if(!$('boardOut').value)buildBoard();copyText($('boardOut').value,'가채점표를 복사했습니다');}
+
+/* ================= SETTINGS ================= */
+function renderSettings(){
+  const s=data.settings;
+  $('set_aca').value=s.academyName;$('set_ded').value=s.deduction;$('set_split').value=s.splitRatio;
+  $('set_tax').value=s.taxRate;$('set_card').value=s.cardRate;$('set_spm').value=s.sessionsPerMonth;
+  renderHallManage();renderHallSelectors();renderSubjManage();renderPresetManage();previewCalc();
+  if($('cl_url')){$('cl_url').value=cloud.url;$('cl_token').value=cloud.token;$('cl_auto').checked=cloud.auto;$('appsCode').value=APPS_SCRIPT;}
+  setSync(cloud.url?'ok':'idle');
+}
+function saveSettings(){
+  const s=data.settings;
+  s.academyName=$('set_aca').value.trim()||'우리 학원';
+  s.deduction=Number($('set_ded').value)||0;s.splitRatio=Number($('set_split').value)||0;
+  s.taxRate=Number($('set_tax').value)||0;s.cardRate=Number($('set_card').value)||0;
+  s.sessionsPerMonth=Number($('set_spm').value)||4;
+  save();$('acaName').textContent=s.academyName;previewCalc();toast('설정을 저장했습니다');
+}
+function previewCalc(){
+  const amt=Number($('prevAmt').value)||0;
+  // preview uses current (unsaved) form values
+  const backup={...data.settings};
+  data.settings={academyName:'',deduction:Number($('set_ded').value)||0,splitRatio:Number($('set_split').value)||0,
+    taxRate:Number($('set_tax').value)||0,cardRate:Number($('set_card').value)||0,sessionsPerMonth:4};
+  const r=calcShare(amt);data.settings=backup;
+  $('prevIn').textContent=won(amt);$('prevOut').textContent=won(r)+'원';
+}
+function renderSubjManage(){
+  const box=$('subjManage');box.innerHTML='';
+  data.subjects.forEach(sub=>{
+    const c=document.createElement('span');c.className='chip';c.style.padding='4px 6px 4px 10px';
+    c.innerHTML=`${esc(sub)} <button class="btn sm ghost" style="padding:0 5px;border:none;color:var(--danger)" onclick="removeSubject('${esc(sub)}')">×</button>`;
+    box.appendChild(c);
+  });
+}
+function addSubject(){const n=$('newSubject').value.trim();if(!n)return;if(!data.subjects.includes(n))data.subjects.push(n);save();$('newSubject').value='';renderSubjManage();toast('과목이 추가되었습니다');}
+function removeSubject(sub){data.subjects=data.subjects.filter(s=>s!==sub);save();renderSubjManage();}
+function renderPresetManage(){
+  const box=$('presetManage');box.innerHTML='';
+  if(!data.presets.length){box.innerHTML='<div class="small">등록된 빠른 금액이 없습니다.</div>';return;}
+  data.presets.forEach((p,i)=>{
+    const d=document.createElement('div');d.className='settrow';
+    d.innerHTML=`<span class="pill">${esc(p.label)} · ${won(p.amount)}원</span> <button class="btn sm danger" onclick="removePreset(${i})">삭제</button>`;
+    box.appendChild(d);
+  });
+}
+function addPreset(){const l=$('newPresetLabel').value.trim();const a=Number($('newPresetAmt').value);if(!l||!a){toast('이름과 금액을 입력하세요');return;}data.presets.push({label:l,amount:a});save();$('newPresetLabel').value='';$('newPresetAmt').value='';renderPresetManage();toast('추가되었습니다');}
+function removePreset(i){data.presets.splice(i,1);save();renderPresetManage();}
+
+/* ================= BACKUP / EXPORT ================= */
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  downloadBlob(blob,`학생관리_백업_${todayMonth()}.json`);toast('백업을 내려받았습니다');
+}
+function importBackup(e){
+  const file=e.target.files[0];if(!file)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d.students){throw 0;}
+    confirmModal('백업 불러오기','현재 데이터를 덮어씁니다. 계속할까요?',()=>{data=Object.assign(defaultData(),d);save();initAll();toast('불러오기 완료');});
+  }catch(err){toast('올바른 백업 파일이 아닙니다');}};
+  rd.readAsText(file);e.target.value='';
+}
+function resetAll(){confirmModal('전체 초기화','이 기기의 모든 데이터가 삭제됩니다. (클라우드는 자동으로 지우지 않음 — 원하면 초기화 후 [⬆ 클라우드에 올리기]) 계속할까요?',()=>{suppressPush=true;data=defaultData();localStorage.setItem(KEY,JSON.stringify(data));initAll();suppressPush=false;setSync(cloud.url?'ok':'idle');toast('초기화되었습니다');});}
+function exportMonthExcel(){
+  const ym=$('m_month').value;const mo=data.monthly[ym]||{};const spm=data.settings.sessionsPerMonth||4;
+  const rows=[['이름','관','학년','학교','등록','수업횟수','결제금액','내정산액','비고']];
+  data.students.forEach(s=>{const r=mo[s.id];if(!r)return;const a=effectiveAmount(s,r,ym);const partial=r.sessions<spm;
+    rows.push([s.name,s.hall||'',s.grade,s.school||'',r.enrolled?'O':'',r.sessions,r.enrolled?a:'',r.enrolled?calcShare(a):'',partial&&s.startDate?`${fmtStart(s.startDate)} 시작 ${r.sessions}/${spm}`:'']);});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),ym);
+  XLSX.writeFile(wb,`월정산_${ym}.xlsx`);toast('엑셀을 내려받았습니다');
+}
+function exportAllExcel(){
+  const wb=XLSX.utils.book_new();
+  const st=[['이름','관','정산그룹','학년','학교','수강과목','수업요일','시작일','기본수강료','상태']];
+  data.students.forEach(s=>st.push([s.name,s.hall||'',feeGroupOf(s),s.grade,s.school||'',(s.subjects||[]).join(','),
+    (s.weekday!==''&&s.weekday!=null)?WD[s.weekday]:'',s.startDate||'',s.baseTuition||'',s.active?'재원':'퇴원']));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(st),'학생');
+  const sc=[['이름','연도','학년','학기','구분','과목','점수']];
+  data.scores.slice().sort((a,b)=>examOrder(a)-examOrder(b)).forEach(x=>{const stu=studentById(x.studentId);
+    sc.push([stu?stu.name:'',x.year,x.gradeAtExam,x.semester+'학기',x.exam,x.subject,x.score]);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sc),'성적');
+  Object.keys(data.monthly).sort().forEach(ym=>{const mo=data.monthly[ym];const spm=data.settings.sessionsPerMonth||4;
+    const rows=[['이름','관','학년','등록','수업횟수','결제금액','내정산액']];
+    data.students.forEach(s=>{const r=mo[s.id];if(!r||!r.enrolled)return;const a=effectiveAmount(s,r,ym);
+      rows.push([s.name,s.hall||'',s.grade,'O',r.sessions,a,calcShare(a)]);});
+    if(rows.length>1)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),ym);});
+  XLSX.writeFile(wb,`학생관리_전체_${todayMonth()}.xlsx`);toast('엑셀을 내려받았습니다');
+}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+
+/* ================= UTIL: copy / modal ================= */
+function copyText(t,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast(msg)).catch(()=>fallbackCopy(t,msg));}
+  else fallbackCopy(t,msg);
+}
+function fallbackCopy(t,msg){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(e){toast('복사 실패 — 직접 선택해 복사하세요');}document.body.removeChild(ta);}
+let modalCb=null;
+function confirmModal(title,body,cb){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;modalCb=cb;$('modalBg').classList.add('show');}
+function closeModal(){$('modalBg').classList.remove('show');modalCb=null;}
+$('modalOk').onclick=()=>{if(modalCb)modalCb();closeModal();};
+$('modalBg').onclick=e=>{if(e.target===$('modalBg'))closeModal();};
+
+/* ================= CLOUD SYNC (Google Sheet via Apps Script) ================= */
+const APPS_SCRIPT=`const SHEET_NAME='DATA';
+const TOKEN=''; // 암호를 쓰려면 따옴표 안에 입력 (예: 'mypass1234'). 앱에도 같은 값을 넣으세요.
+
+function doGet(e){
+  var cb = (e && e.parameter) ? e.parameter.callback : '';
+  if (TOKEN && (!e || !e.parameter || e.parameter.token !== TOKEN)) return reply(cb, {error:'unauthorized'});
+  var sh = getSheet();
+  var n = sh.getLastRow();
+  var vals = n ? sh.getRange(1,1,n,1).getValues().map(function(r){return r[0];}) : [];
+  return reply(cb, {data: vals.join('')});
+}
+
+function doPost(e){
+  var body = {};
+  try { body = JSON.parse(e.postData.contents); } catch (err) {}
+  if (TOKEN && body.token !== TOKEN) return reply('', {error:'unauthorized'});
+  var json = body.data || '';
+  var sh = getSheet();
+  sh.clearContents();
+  var chunks = [];
+  for (var i=0; i<json.length; i+=40000) chunks.push([json.substring(i, i+40000)]);
+  if (chunks.length) sh.getRange(1,1,chunks.length,1).setValues(chunks);
+  return reply('', {ok:true, saved: json.length});
+}
+
+function getSheet(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) sh = ss.insertSheet(SHEET_NAME);
+  return sh;
+}
+
+function reply(cb, obj){
+  var s = JSON.stringify(obj);
+  if (cb) return ContentService.createTextOutput(cb + '(' + s + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON);
+}`;
+let pushTimer=null;
+function setSync(state,msg){
+  const map={idle:['미연결','man'],pending:['저장 대기…','man'],saving:['저장 중…','man'],ok:['동기화됨','auto'],loading:['불러오는 중…','man'],error:['오류'+(msg?(': '+msg):''),'man'],offline:['오프라인(로컬 저장됨)','man']};
+  const e=map[state]||['','man'];
+  const p=$('syncPill');if(p){p.textContent=e[0];p.className='tag '+(e[1]==='auto'?'auto':'man');}
+  const f=$('syncFoot');if(f)f.textContent=cloud.url?('☁ '+e[0]):'로컬 저장';
+}
+function schedulePush(){if(!cloud.url||!cloud.auto)return;setSync('pending');clearTimeout(pushTimer);pushTimer=setTimeout(()=>cloudPush(false),1500);}
+async function cloudPush(showToast){
+  if(!cloud.url)return;setSync('saving');
+  try{
+    await fetch(cloud.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:cloud.token,data:JSON.stringify(data)})});
+    setSync('ok');if(showToast)toast('클라우드에 저장했습니다');
+  }catch(e){setSync('offline');if(showToast)toast('저장 실패 — 인터넷을 확인하세요');}
+}
+function cloudGetJSONP(){
+  return new Promise((resolve,reject)=>{
+    const cb='__cl_'+Date.now()+Math.floor(Math.random()*1000);
+    const s=document.createElement('script');let done=false;
+    const to=setTimeout(()=>{if(!done){done=true;cleanup();reject(new Error('시간초과'));}},15000);
+    function cleanup(){try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(to);}
+    window[cb]=(resp)=>{if(done)return;done=true;cleanup();if(resp&&resp.error)reject(new Error(resp.error));else resolve(resp?resp.data:'');};
+    let u=cloud.url+(cloud.url.indexOf('?')>=0?'&':'?')+'callback='+cb;
+    if(cloud.token)u+='&token='+encodeURIComponent(cloud.token);
+    s.onerror=()=>{if(!done){done=true;cleanup();reject(new Error('네트워크/URL 오류'));}};
+    s.src=u;document.body.appendChild(s);
+  });
+}
+function readCloudFields(){cloud.url=($('cl_url')?$('cl_url').value.trim():cloud.url);cloud.token=($('cl_token')?$('cl_token').value.trim():cloud.token);cloud.auto=($('cl_auto')?$('cl_auto').checked:cloud.auto);saveCloud();}
+async function cloudConnect(){
+  readCloudFields();
+  if(!cloud.url){toast('웹앱 URL을 입력하세요');return;}
+  setSync('loading');
+  try{await cloudGetJSONP();setSync('ok');toast('연결 성공! 이제 [⬆ 클라우드에 올리기]로 현재 데이터를 올리세요.');}
+  catch(e){setSync('error',e.message);toast('연결 실패: '+e.message);}
+}
+function cloudPushManual(){readCloudFields();if(!cloud.url){toast('먼저 URL을 입력·연결하세요');return;}cloudPush(true);}
+async function cloudPull(silent){
+  if(!silent)readCloudFields();
+  if(!cloud.url){if(!silent)toast('먼저 URL을 입력하세요');return false;}
+  setSync('loading');
+  try{
+    const remote=await cloudGetJSONP();
+    if(!remote){setSync('ok');if(!silent)toast('클라우드에 데이터가 없습니다. [⬆ 클라우드에 올리기] 먼저 하세요.');return false;}
+    const parsed=JSON.parse(remote);
+    const localT=(data&&data.updatedAt)||0,remoteT=parsed.updatedAt||0;
+    if(silent&&localT>remoteT){setSync('ok');schedulePush();return false;}
+    suppressPush=true;
+    data=Object.assign(defaultData(),parsed);
+    localStorage.setItem(KEY,JSON.stringify(data));
+    initAll();
+    suppressPush=false;
+    setSync('ok');
+    if(!silent)toast('클라우드에서 불러왔습니다');
+    return true;
+  }catch(e){setSync('error',e.message);if(!silent)toast('불러오기 실패: '+e.message);return false;}
+}
+function toggleCloudHelp(){const h=$('cloudHelp');h.style.display=h.style.display==='none'?'block':'none';}
+function copyAppsScript(){copyText(APPS_SCRIPT,'Apps Script 코드를 복사했습니다');}
+
+/* ================= INIT ================= */
+function initAll(){
+  $('acaName').textContent=data.settings.academyName;
+  renderHallSelectors();resetStudentForm();renderPresetChips();renderStudents();refreshSchoolList();
+  $('m_month').value=todayMonth();
+  fillScoreSelectors();renderSettings();
+}
+function boot(){
+  suppressPush=true;initAll();suppressPush=false;
+  setSync(cloud.url?'ok':'idle');
+  if(cloud.url&&cloud.auto)cloudPull(true);
+}
+boot();
+</script>
+</body>
+</html>
