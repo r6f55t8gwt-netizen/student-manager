@@ -170,6 +170,7 @@ select.mini,input.mini{padding:6px 8px}
             </select>
           </div>
           <div class="field"><label>수업 시작일</label><input id="s_start" type="date"></div>
+          <div class="field"><label>마지막 수업일(퇴원 시)</label><input id="s_end" type="date"></div>
           <div class="field"><label>기본 월 수강료(원)</label><input id="s_tuition" type="number" class="mini" placeholder="예: 280000"></div>
           <div class="field"><label>정산 그룹(선택)</label><input id="s_feegroup" placeholder="예: 고2 2과목" list="feeGroupList"></div>
         </div>
@@ -484,19 +485,23 @@ function countClassDays(year,month/*1-12*/,weekday,fromDay){
   for(let d=fromDay;d<=last;d++){ if(new Date(year,month-1,d).getDay()===weekday) c++; }
   return c;
 }
-/* 시작한 달의 '몇 주차 시작'으로 n/4 산정 (주2·3회여도 비율은 동일, 과목수는 가격만 좌우) */
+/* 시작·종료(마지막 수업일)를 반영해 그 달 n/4 산정 (주2·3회여도 비율 동일, 과목수는 가격만 좌우) */
 function autoSessions(stu,ym){
   const [y,m]=ym.split('-').map(Number);
   const spm=data.settings.sessionsPerMonth||4;
-  if(!stu.startDate) return spm;
-  const [sy,sm,sd]=stu.startDate.split('-').map(Number);
-  const startYM=sy*100+sm, curYM=y*100+m;
-  if(curYM<startYM) return 0;      // 아직 시작 전
-  if(curYM>startYM) return spm;    // 이전 달에 시작 → 전액(full)
-  const weekOfMonth=Math.ceil(sd/7);   // 1~5주차
-  let w=spm-(weekOfMonth-1);
+  const curYM=y*100+m;
+  let startWeek=1, endWeek=spm;
+  if(stu.startDate){const [sy,sm,sd]=stu.startDate.split('-').map(Number);const sYM=sy*100+sm;
+    if(curYM<sYM)return 0;                 // 아직 시작 전
+    if(curYM===sYM)startWeek=Math.ceil(sd/7);
+  }
+  if(stu.endDate){const [ey,em,ed]=stu.endDate.split('-').map(Number);const eYM=ey*100+em;
+    if(curYM>eYM)return 0;                 // 종료(마지막수업) 이후 달 → 제외
+    if(curYM===eYM)endWeek=Math.ceil(ed/7);
+  }
+  let w=endWeek-startWeek+1;               // 예: 시작4주차·종료없음=1/4, 종료2주차=2/4
   if(w<1)w=1; if(w>spm)w=spm;
-  return w;                        // 예: 23일(4주차)=1/4, 7일(1주차)=4/4
+  return w;
 }
 
 /* ================= SETTLEMENT ================= */
@@ -560,7 +565,7 @@ function saveStudent(){
   const obj={
     name, hall:$('s_hall').value, grade:$('s_grade').value, school:$('s_school').value.trim(),
     subjects:[...selectedSubjects],
-    weekday:$('s_weekday').value, startDate:$('s_start').value,
+    weekday:$('s_weekday').value, startDate:$('s_start').value, endDate:$('s_end').value,
     baseTuition:Number($('s_tuition').value)||0, feeGroup:$('s_feegroup').value.trim(), memo:$('s_memo').value.trim()
   };
   if(editid){Object.assign(studentById(editid),obj);toast('수정되었습니다');}
@@ -571,19 +576,29 @@ function editStudent(id){
   const s=studentById(id);
   $('s_editid').value=id;$('s_name').value=s.name;$('s_grade').value=s.grade;
   $('s_hall').value=s.hall||'';$('s_school').value=s.school||'';$('s_weekday').value=s.weekday??'';
-  $('s_start').value=s.startDate||'';$('s_tuition').value=s.baseTuition||'';
+  $('s_start').value=s.startDate||'';$('s_end').value=s.endDate||'';$('s_tuition').value=s.baseTuition||'';
   $('s_feegroup').value=s.feeGroup||'';$('s_memo').value=s.memo||'';selectedSubjects=[...(s.subjects||[])];
   renderSubjectToggles();
   $('studFormTitle').textContent='✎ 학생 수정';$('s_cancel').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function resetStudentForm(){
-  ['s_name','s_school','s_start','s_tuition','s_feegroup','s_memo','s_editid'].forEach(i=>$(i).value='');
+  ['s_name','s_school','s_start','s_end','s_tuition','s_feegroup','s_memo','s_editid'].forEach(i=>$(i).value='');
   $('s_grade').value='고1';$('s_weekday').value='';selectedSubjects=[];
   if($('s_hall'))$('s_hall').value=(data.halls[0]||'');
   renderSubjectToggles();$('studFormTitle').textContent='＋ 학생 추가';$('s_cancel').style.display='none';
 }
-function toggleActive(id){const s=studentById(id);s.active=!s.active;save();renderStudents();}
+function toggleActive(id){
+  const s=studentById(id);
+  if(s.active){
+    const today=new Date().toISOString().slice(0,10);
+    const d=prompt(`[${s.name}] 마지막 수업일(퇴원일)을 입력하세요.\nYYYY-MM-DD 형식.\n이 달까지는 다닌 주수(n/4)만큼 정산에 포함되고, 다음 달부터 제외됩니다.`, today);
+    if(d===null)return;
+    s.endDate=(d.trim()||today); s.active=false;
+  }else{ s.active=true; s.endDate=''; }
+  save(); renderStudents();
+  if($('page-monthly')&&$('page-monthly').classList.contains('active'))renderMonthly();
+}
 function deleteStudent(id){
   const s=studentById(id);
   confirmModal('학생 삭제',`<b>${s.name}</b> 학생과 관련된 성적·월정산 기록이 모두 삭제됩니다. 계속할까요?`,()=>{
@@ -617,7 +632,7 @@ function renderStudents(){
       <td>${s.weekday!==''&&s.weekday!=null?WD[s.weekday]+'요일':'-'}</td>
       <td>${s.startDate||'-'}</td>
       <td class="num money">${s.baseTuition?won(s.baseTuition):'-'}</td>
-      <td>${s.active?'<span class="tag auto">재원</span>':'<span class="tag man">퇴원</span>'}</td>
+      <td>${s.endDate?`<span class="tag man">종료 ${fmtStart(s.endDate)}</span>`:(s.active?'<span class="tag auto">재원</span>':'<span class="tag man">퇴원</span>')}</td>
       <td style="white-space:nowrap">
         <button class="btn sm" onclick="editStudent('${s.id}')">수정</button>
         <button class="btn sm" onclick="toggleActive('${s.id}')">${s.active?'퇴원':'복원'}</button>
@@ -641,7 +656,6 @@ function feeGroupOf(s){
   return g.trim()||'기타';
 }
 function manwon(n){ if(!n)return''; return (n%10000===0)?((n/10000)+'만원'):(won(n)+'원'); }
-function groupPrice(list){ const cnt={};let best=0,bv=0; list.forEach(s=>{const b=s.baseTuition||0;if(!b)return;cnt[b]=(cnt[b]||0)+1;if(cnt[b]>bv||(cnt[b]===bv&&b>best)){bv=cnt[b];best=b;}}); return best; }
 function gradeRank(g){const o=['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수'];const m=((g||'').match(/초\d|중\d|고\d|N수/)||[''])[0];const i=o.indexOf(m);return i<0?99:i;}
 /* ---- halls (관) ---- */
 function hallOptions(includeAll){
@@ -663,15 +677,20 @@ function removeHall(h){data.halls=data.halls.filter(x=>x!==h);save();renderHallM
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ================= MONTHLY ================= */
+function enrolledInMonth(s,ym){
+  if(s.startDate && s.startDate.slice(0,7)>ym) return false;   // 아직 시작 전
+  if(s.endDate) return s.endDate.slice(0,7)>=ym;               // 종료(마지막수업)월까지만 포함
+  return s.active;                                             // 종료일 없으면 재원 중일 때만
+}
 function getMonthRecords(ym){
   if(!data.monthly[ym])data.monthly[ym]={};
   const mo=data.monthly[ym];
-  // ensure active students have a record (enrolled by default if started on/before this month)
-  data.students.filter(s=>s.active).forEach(s=>{
+  data.students.forEach(s=>{
     if(!(s.id in mo)){
-      const sess=autoSessions(s,ym);
-      const started=!s.startDate|| (s.startDate.slice(0,7)<=ym);
-      mo[s.id]={enrolled:started&&sess>0,sessions:sess,sessionsAuto:true,amount:null};
+      if(enrolledInMonth(s,ym)){const sess=autoSessions(s,ym);mo[s.id]={enrolled:sess>0,sessions:sess,sessionsAuto:true,amount:null};}
+    }else{
+      const r=mo[s.id];
+      if(r.sessionsAuto){ r.sessions=autoSessions(s,ym); r.enrolled=enrolledInMonth(s,ym)&&r.sessions>0; }
     }
   });
   return mo;
@@ -704,7 +723,7 @@ function renderMonthly(){
   const mo=getMonthRecords(ym);
   save();
   const hall=$('m_hall')?$('m_hall').value:'';
-  const rows=data.students.filter(s=>(s.active||(mo[s.id]&&mo[s.id].enrolled))&&(!hall||(s.hall||'')===hall));
+  const rows=data.students.filter(s=>((mo[s.id]&&mo[s.id].enrolled)||enrolledInMonth(s,ym))&&(!hall||(s.hall||'')===hall));
   const wrap=$('monthlyTableWrap');
   if(!rows.length){wrap.innerHTML='<div class="empty">재원생이 없습니다. 학생 관리에서 추가하세요.</div>';$('monthTotals').innerHTML='';buildMessage();return;}
   const spm=data.settings.sessionsPerMonth||4;
@@ -715,7 +734,11 @@ function renderMonthly(){
     const share=calcShare(amt);
     const partial=r.sessions<spm;
     const started=s.startDate&&s.startDate.slice(0,7)===ym;
-    const note=started?`${fmtStart(s.startDate)} 첫수업${partial?` ${r.sessions}/${spm}`:''}`:(partial?`${r.sessions}/${spm}`:'');
+    const ended=s.endDate&&s.endDate.slice(0,7)===ym;
+    let note='';
+    if(started)note+=`${fmtStart(s.startDate)} 첫수업`;
+    if(ended)note+=(note?' · ':'')+`${fmtStart(s.endDate)} 종료`;
+    if(partial)note+=(note?' ':'')+`${r.sessions}/${spm}`;
     h+=`<tr class="${r.enrolled?'':'inactive'}">
       <td><input type="checkbox" ${r.enrolled?'checked':''} onchange="setEnroll('${s.id}',this.checked)"></td>
       <td><b>${esc(s.name)}</b></td><td>${s.hall?`<span class="chip">${esc(s.hall)}</span>`:'-'}</td><td>${esc(s.grade)}</td>
@@ -755,25 +778,32 @@ function buildMessage(){
   const showList=$('msgPerStudent').checked, showSettle=$('msgShare').checked;
   const s=data.settings;const spm=s.sessionsPerMonth||4;
   const enrolled=data.students.filter(st=>{const r=mo[st.id];return r&&r.enrolled&&(!hall||(st.hall||'')===hall);});
-  // 정산 그룹별 묶기
+  // 그 달 결제금액(전액 환산) 기준으로 그룹 가격 산정 → 금액 다르면 줄도 따로
+  const fullPriceOf=(st,r)=>{ if(st.baseTuition>0)return st.baseTuition; const a=effectiveAmount(st,r,ym); const ratio=Math.min(r.sessions,spm)/spm; return ratio>0?Math.round(a/ratio):a; };
   const groups={};const order=[];
-  enrolled.forEach(st=>{const k=feeGroupOf(st);if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(st);});
-  order.sort((a,b)=>gradeRank(a)-gradeRank(b)||a.localeCompare(b,'ko'));
+  enrolled.forEach(st=>{const r=mo[st.id];const label=feeGroupOf(st);const price=fullPriceOf(st,r);const key=label+'|'+price;
+    if(!groups[key]){groups[key]={label,grade:st.grade||'기타',price,students:[]};order.push(key);}
+    groups[key].students.push(st);});
+  order.sort((a,b)=>{const A=groups[a],B=groups[b];return gradeRank(A.grade)-gradeRank(B.grade)||A.price-B.price||A.label.localeCompare(B.label,'ko');});
   let total=0,n=0;const perGrade={},perGradeSub={};const listLines=[];
-  order.forEach(k=>{
-    const arr=groups[k];const price=groupPrice(arr);
-    const names=arr.map(st=>{
+  order.forEach(key=>{
+    const G=groups[key];
+    const names=G.students.map(st=>{
       const r=mo[st.id];const a=effectiveAmount(st,r,ym);total+=a;n++;
-      const gk=st.grade||'기타';perGrade[gk]=(perGrade[gk]||0)+a;
-      const sub=(k.indexOf(gk)===0)?(k.slice(gk.length).trim()||k):k;
-      perGradeSub[gk]=perGradeSub[gk]||{};perGradeSub[gk][sub]=(perGradeSub[gk][sub]||0)+1;
-      const started=st.startDate&&st.startDate.slice(0,7)===ym;
+      perGrade[G.grade]=(perGrade[G.grade]||0)+a;
+      let sub=G.label; if(sub.indexOf(G.grade)===0)sub=sub.slice(G.grade.length).trim(); if(!sub)sub=manwon(G.price)||'기타';
+      perGradeSub[G.grade]=perGradeSub[G.grade]||{}; perGradeSub[G.grade][sub]=(perGradeSub[G.grade][sub]||0)+1;
+      const startedThis=st.startDate&&st.startDate.slice(0,7)===ym;
+      const endedThis=st.endDate&&st.endDate.slice(0,7)===ym;
       const partial=r.sessions<spm;
-      let inside=started?`${m}/${Number(st.startDate.split('-')[2])} 첫수업`+(partial?`(${r.sessions}/${spm}수업료)`:''):'';
+      let inside='';
+      if(startedThis)inside+=`${m}/${Number(st.startDate.split('-')[2])} 첫수업`;
+      if(endedThis)inside+=(inside?', ':'')+`${m}/${Number(st.endDate.split('-')[2])} 종료`;
+      if(partial&&inside)inside+=`(${r.sessions}/${spm}수업료)`;
       const memo=(r.note||'').trim();if(memo)inside+=(inside?' ':'')+memo;
       return inside?`${st.name}(${inside})`:st.name;
     });
-    listLines.push(`- ${k}${price?`(${manwon(price)})`:''}: ${names.join(', ')}`);
+    listLines.push(`- ${G.label}${G.price?`(${manwon(G.price)})`:''}: ${names.join(', ')}`);
   });
   const gradeKeys=Object.keys(perGrade).sort((a,b)=>gradeRank(a)-gradeRank(b));
   const splitText=(s.splitRatio===0.5)?'5:5':`${Math.round(s.splitRatio*10)}:${10-Math.round(s.splitRatio*10)}`;
@@ -975,9 +1005,9 @@ function exportMonthExcel(){
 }
 function exportAllExcel(){
   const wb=XLSX.utils.book_new();
-  const st=[['이름','관','정산그룹','학년','학교','수강과목','수업요일','시작일','기본수강료','상태']];
+  const st=[['이름','관','정산그룹','학년','학교','수강과목','수업요일','시작일','종료일','기본수강료','상태']];
   data.students.forEach(s=>st.push([s.name,s.hall||'',feeGroupOf(s),s.grade,s.school||'',(s.subjects||[]).join(','),
-    (s.weekday!==''&&s.weekday!=null)?WD[s.weekday]:'',s.startDate||'',s.baseTuition||'',s.active?'재원':'퇴원']));
+    (s.weekday!==''&&s.weekday!=null)?WD[s.weekday]:'',s.startDate||'',s.endDate||'',s.baseTuition||'',s.endDate?('종료 '+s.endDate):(s.active?'재원':'퇴원')]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(st),'학생');
   const sc=[['이름','연도','학년','학기','구분','과목','점수']];
   data.scores.slice().sort((a,b)=>examOrder(a)-examOrder(b)).forEach(x=>{const stu=studentById(x.studentId);
