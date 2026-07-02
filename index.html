@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="학생관리">
+<meta name="apple-mobile-web-app-title" content="하이탑학원">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2a2620">
+<meta name="theme-color" content="#1c2b5e">
 <meta name="format-detection" content="telephone=no">
-<title>학생 종합 관리</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<title>하이탑학원 · 학생 관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -472,7 +475,7 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 3 · 2026-07-02 (점수 추이 소수점 반올림)';
+const APP_VERSION='빌드 4 · 2026-07-02 (홈화면 아이콘 · 로고)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4},
