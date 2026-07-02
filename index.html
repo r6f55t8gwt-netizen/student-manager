@@ -275,21 +275,20 @@ select.mini,input.mini{padding:6px 8px}
       <div class="sub">학기별 중간·기말 점수를 모으고, 학생별 추이를 그래프로 봅니다.</div>
 
       <div class="card">
-        <h3>＋ 점수 입력</h3>
+        <h3>⚡ 과목별 일괄 입력 <span class="small">— 시험·과목을 고르면 학생들이 쭉 나오고, 점수를 한꺼번에 저장</span></h3>
         <div class="row">
-          <div class="field"><label>학생</label><select id="sc_student"></select></div>
-          <div class="field"><label>연도</label><input id="sc_year" type="number" class="miniw" value="2026"></div>
-          <div class="field"><label>학년</label>
-            <select id="sc_grade">
-              <option>중1</option><option>중2</option><option>중3</option>
-              <option selected>고1</option><option>고2</option><option>고3</option>
-            </select>
-          </div>
-          <div class="field"><label>학기</label><select id="sc_sem"><option value="1">1학기</option><option value="2">2학기</option></select></div>
-          <div class="field"><label>구분</label><select id="sc_exam"><option>중간</option><option>기말</option></select></div>
-          <div class="field"><label>과목</label><select id="sc_subject"></select></div>
-          <div class="field"><label>점수</label><input id="sc_score" type="number" class="miniw" placeholder="0~100"></div>
-          <div class="field"><label>&nbsp;</label><button class="btn primary" onclick="addScore()">추가</button></div>
+          <div class="field"><label>연도</label><input id="qs_year" type="number" class="miniw" value="2026" onchange="renderBatchScore()"></div>
+          <div class="field"><label>학기</label><select id="qs_sem" onchange="renderBatchScore()"><option value="1">1학기</option><option value="2">2학기</option></select></div>
+          <div class="field"><label>구분</label><select id="qs_exam" onchange="renderBatchScore()"><option>중간</option><option>기말</option></select></div>
+          <div class="field"><label>과목</label><select id="qs_subject" onchange="renderBatchScore()"></select></div>
+          <div class="field"><label>관</label><select id="qs_hall" onchange="renderBatchScore()"></select></div>
+          <div class="field"><label>학년</label><select id="qs_grade" onchange="renderBatchScore()"></select></div>
+          <div class="field" style="justify-content:flex-end"><label class="checkline small" style="margin-bottom:8px"><input type="checkbox" id="qs_enrolledOnly" checked onchange="renderBatchScore()"> 이 과목 수강생만</label></div>
+        </div>
+        <div id="qs_listWrap" style="margin:6px 0 10px"></div>
+        <div class="row" style="align-items:center">
+          <button class="btn primary" onclick="saveBatchScores()">모두 저장</button>
+          <span class="small" id="qs_count"></span>
         </div>
       </div>
 
@@ -848,18 +847,52 @@ function copyMessage(){copyText($('msgOut').value,'메시지를 복사했습니�
 /* ================= SCORES ================= */
 function fillScoreSelectors(){
   const opts=data.students.map(s=>`<option value="${s.id}">${esc(s.name)} (${s.hall?esc(s.hall)+' ':''}${esc(s.grade)})</option>`).join('');
-  $('sc_student').innerHTML=opts||'<option value="">학생 없음</option>';
-  $('sc_subject').innerHTML=data.subjects.map(s=>`<option>${esc(s)}</option>`).join('');
+  if($('qs_subject'))$('qs_subject').innerHTML=data.subjects.map(s=>`<option>${esc(s)}</option>`).join('');
+  if($('qs_hall'))$('qs_hall').innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');
+  if($('qs_grade')){const grades=[...new Set(data.students.map(s=>s.grade).filter(Boolean))].sort((a,b)=>gradeRank(a)-gradeRank(b));
+    $('qs_grade').innerHTML='<option value="">전체 학년</option>'+grades.map(g=>`<option>${esc(g)}</option>`).join('');}
   $('chartStudent').innerHTML=opts||'<option value="">학생 없음</option>';
   $('scoreFilterStudent').innerHTML='<option value="">전체 학생</option>'+opts;
+  renderBatchScore();
 }
-function addScore(){
-  const sid=$('sc_student').value;if(!sid){toast('학생을 선택하세요');return;}
-  const score=Number($('sc_score').value);
-  if($('sc_score').value===''||isNaN(score)){toast('점수를 입력하세요');return;}
-  data.scores.push({id:uid(),studentId:sid,year:Number($('sc_year').value),gradeAtExam:$('sc_grade').value,
-    semester:$('sc_sem').value,exam:$('sc_exam').value,subject:$('sc_subject').value,score});
-  save();$('sc_score').value='';renderScoreTable();renderChart();toast('점수가 추가되었습니다');
+function findScore(sid,year,sem,exam,sub){
+  return data.scores.find(x=>x.studentId===sid&&x.year===year&&String(x.semester)===String(sem)&&x.exam===exam&&x.subject===sub);
+}
+function renderBatchScore(){
+  const box=$('qs_listWrap'); if(!box)return;
+  const year=Number($('qs_year').value), sem=$('qs_sem').value, exam=$('qs_exam').value, subject=$('qs_subject')?$('qs_subject').value:'';
+  const hall=$('qs_hall')?$('qs_hall').value:'', grade=$('qs_grade')?$('qs_grade').value:'', enrolledOnly=$('qs_enrolledOnly')?$('qs_enrolledOnly').checked:true;
+  if(!subject){box.innerHTML='<div class="small">과목을 선택하세요.</div>';$('qs_count').textContent='';return;}
+  let list=data.students.filter(s=>{
+    if(hall&&(s.hall||'')!==hall)return false;
+    if(grade&&s.grade!==grade)return false;
+    if(enrolledOnly&&!(s.subjects||[]).includes(subject))return false;
+    return true;
+  });
+  list.sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||(a.hall||'').localeCompare(b.hall||'','ko')||(a.name||'').localeCompare(b.name||'','ko'));
+  if(!list.length){box.innerHTML='<div class="empty">해당하는 학생이 없습니다. 필터를 넓히거나 “이 과목 수강생만”을 꺼보세요.</div>';$('qs_count').textContent='';return;}
+  let h='<table><thead><tr><th>학생</th><th>관</th><th>학년</th><th>학교</th><th class="num">'+esc(subject)+' 점수</th></tr></thead><tbody>';
+  list.forEach(s=>{const ex=findScore(s.id,year,sem,exam,subject);
+    h+=`<tr><td><b>${esc(s.name)}</b></td><td>${s.hall?`<span class="chip">${esc(s.hall)}</span>`:'-'}</td><td>${esc(s.grade)}</td><td class="small">${esc(s.school||'-')}</td>
+      <td class="num"><input type="number" class="qs_in" data-sid="${s.id}" value="${ex?ex.score:''}" placeholder="점수" inputmode="numeric" style="width:88px;padding:9px;border:1px solid var(--line);border-radius:8px;text-align:right"></td></tr>`;});
+  box.innerHTML=h+'</tbody></table>';
+  $('qs_count').textContent=`${list.length}명 · 이미 입력된 점수는 채워져 있음(수정 가능), 빈 칸은 저장 안 됨`;
+}
+function saveBatchScores(){
+  const year=Number($('qs_year').value), sem=$('qs_sem').value, exam=$('qs_exam').value, subject=$('qs_subject')?$('qs_subject').value:'';
+  if(!subject){toast('과목을 선택하세요');return;}
+  let n=0;
+  document.querySelectorAll('#qs_listWrap .qs_in').forEach(inp=>{
+    const sid=inp.dataset.sid, raw=(inp.value||'').trim(); if(raw==='')return;
+    const score=Number(raw); if(isNaN(score))return;
+    const stu=studentById(sid); if(!stu)return;
+    const ex=findScore(sid,year,sem,exam,subject);
+    if(ex){ex.score=score;ex.gradeAtExam=stu.grade;}
+    else{data.scores.push({id:uid(),studentId:sid,year,gradeAtExam:stu.grade,semester:sem,exam,subject,score});}
+    n++;
+  });
+  if(!n){toast('입력된 점수가 없습니다');return;}
+  save();renderScoreTable();renderChart();toast(`${subject} · ${year} ${sem}학기 ${exam} — ${n}명 저장`);
 }
 function deleteScore(id){data.scores=data.scores.filter(s=>s.id!==id);save();renderScoreTable();renderChart();}
 function examOrder(sc){return sc.year*1000+Number(sc.semester)*10+(sc.exam==='중간'?1:2);}
