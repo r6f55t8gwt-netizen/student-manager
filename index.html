@@ -1015,7 +1015,7 @@ function buildBoard(){
       rows.forEach(r=>{
         if(trend){
           let line=r.name;
-          if(r.mid!=null&&r.fin!=null){const d=r.fin-r.mid;const tag=d>0?`${d}점 상승`:d<0?`${-d}점 하락`:'유지';line+=` 중간 ${r.mid} → 기말 ${r.fin} (${tag})`;}
+          if(r.mid!=null&&r.fin!=null){const d=Math.round((r.fin-r.mid)*10)/10;const ad=Math.abs(d);const tag=d>0?`${ad}점 상승`:d<0?`${ad}점 하락`:'유지';line+=` 중간 ${r.mid} → 기말 ${r.fin} (${tag})`;}
           else if(r.mid!=null){line+=` 중간 ${r.mid}`;}
           else if(r.fin!=null){line+=` 기말 ${r.fin}`;}
           out+=line.replace(/\s+$/,'')+'\n';
