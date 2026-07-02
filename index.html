@@ -334,10 +334,11 @@ select.mini,input.mini{padding:6px 8px}
           <div class="field"><label>&nbsp;</label><button class="btn blue" onclick="buildBoard()">표 생성</button></div>
         </div>
         <div class="row" style="gap:18px;margin-top:2px">
+          <label class="checkline small"><input type="checkbox" id="b_trend" onchange="buildBoard()"> 중간→기말 상승 추이 표시</label>
           <label class="checkline small"><input type="checkbox" id="b_stats" checked onchange="buildBoard()"> 평균·최고점 요약</label>
           <label class="checkline small"><input type="checkbox" id="b_activeOnly" checked onchange="buildBoard()"> 재원생만(점수 있으면 퇴원생도 표시)</label>
         </div>
-        <div class="small" style="margin-top:6px">연도·학기·중간/기말만 골라도 <b>전체 과목 × 학교</b>로 나옵니다. 과목/학교/관으로 좁힐 수 있고, 점수 미입력 학생은 이름만 표시됩니다.</div>
+        <div class="small" style="margin-top:6px">연도·학기·중간/기말만 골라도 <b>전체 과목 × 학교</b>로 나옵니다. 점수 미입력 학생은 이름만 표시됩니다. <b>추이 표시</b>를 켜면 위 중간/기말 선택은 무시되고, 같은 학기의 중간·기말을 <b>중간 88 → 기말 92 (4점 상승)</b>처럼 비교합니다.</div>
       </div>
 
       <div class="card">
@@ -964,16 +965,19 @@ function buildBoard(){
   const fSub=$('b_subject').value, fSchool=$('b_school').value, fHall=$('b_hall').value;
   const activeOnly=$('b_activeOnly')?$('b_activeOnly').checked:true;
   const sortBy=$('b_sort').value, showStats=$('b_stats').checked;
+  const trend=$('b_trend')?$('b_trend').checked:false;
   const subjects=fSub?[fSub]:data.subjects.slice();
   const scope=[]; if(fHall)scope.push(fHall); if(fSchool)scope.push(fSchool); if(fSub)scope.push(fSub);
-  let out=`[${year}년 ${sem}학기 ${exam} 가채점${scope.length?' · '+scope.join(' '):''}]\n`;
+  let out=`[${year}년 ${sem}학기 ${trend?'중간→기말 추이':exam} 가채점${scope.length?' · '+scope.join(' '):''}]\n`;
   let any=false;
   subjects.forEach(subject=>{
     let roster=data.students.filter(s=>{
       if(!(s.subjects||[]).includes(subject))return false;
       if(fHall&&(s.hall||'')!==fHall)return false;
       if(fSchool&&(s.school||'')!==fSchool)return false;
-      const hasScore=!!findScore(s.id,year,sem,exam,subject);
+      const hasScore=trend
+        ? (!!findScore(s.id,year,sem,'중간',subject)||!!findScore(s.id,year,sem,'기말',subject))
+        : !!findScore(s.id,year,sem,exam,subject);
       if(activeOnly && !(s.active&&!s.endDate) && !hasScore)return false;
       return true;
     });
@@ -982,16 +986,43 @@ function buildBoard(){
     roster.forEach(s=>{const sc=s.school||'(학교 미지정)';if(!bySchool[sc]){bySchool[sc]=[];order.push(sc);}bySchool[sc].push(s);});
     order.sort((a,b)=>a.localeCompare(b,'ko'));
     order.forEach(school=>{
-      const rows=bySchool[school].map(s=>({name:s.name,score:(findScore(s.id,year,sem,exam,subject)||{}).score}));
+      const rows=bySchool[school].map(s=>{
+        if(trend){
+          const mid=(findScore(s.id,year,sem,'중간',subject)||{}).score;
+          const fin=(findScore(s.id,year,sem,'기말',subject)||{}).score;
+          return {name:s.name,mid,fin,sortScore:(fin!=null?fin:(mid!=null?mid:null))};
+        }
+        const sc=(findScore(s.id,year,sem,exam,subject)||{}).score;
+        return {name:s.name,score:sc,sortScore:sc};
+      });
       if(sortBy==='name')rows.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-      else rows.sort((a,b)=>((b.score==null?-1:b.score)-(a.score==null?-1:a.score))||a.name.localeCompare(b.name,'ko'));
-      const scored=rows.filter(r=>r.score!=null);
+      else rows.sort((a,b)=>((b.sortScore==null?-1:b.sortScore)-(a.sortScore==null?-1:a.sortScore))||a.name.localeCompare(b.name,'ko'));
       any=true;
       let head=`\n■ ${subject} · ${school}`;
-      if(showStats){const avg=scored.length?(scored.reduce((t,r)=>t+r.score,0)/scored.length).toFixed(1):'-';
-        head+=`  (대상 ${rows.length}명, 입력 ${scored.length}명${scored.length?`, 평균 ${avg}, 최고 ${Math.max(...scored.map(r=>r.score))}`:''})`;}
+      if(showStats){
+        if(trend){
+          const mids=rows.filter(r=>r.mid!=null).map(r=>r.mid), fins=rows.filter(r=>r.fin!=null).map(r=>r.fin);
+          const am=mids.length?(mids.reduce((t,v)=>t+v,0)/mids.length).toFixed(1):'-';
+          const af=fins.length?(fins.reduce((t,v)=>t+v,0)/fins.length).toFixed(1):'-';
+          head+=`  (대상 ${rows.length}명 · 중간 ${mids.length}명 평균 ${am} → 기말 ${fins.length}명 평균 ${af})`;
+        }else{
+          const scored=rows.filter(r=>r.score!=null);
+          const avg=scored.length?(scored.reduce((t,r)=>t+r.score,0)/scored.length).toFixed(1):'-';
+          head+=`  (대상 ${rows.length}명, 입력 ${scored.length}명${scored.length?`, 평균 ${avg}, 최고 ${Math.max(...scored.map(r=>r.score))}`:''})`;
+        }
+      }
       out+=head+'\n';
-      rows.forEach(r=>{ out+=(`${r.name} ${r.score!=null?r.score:''}`).replace(/\s+$/,'')+'\n'; });
+      rows.forEach(r=>{
+        if(trend){
+          let line=r.name;
+          if(r.mid!=null&&r.fin!=null){const d=r.fin-r.mid;const tag=d>0?`${d}점 상승`:d<0?`${-d}점 하락`:'유지';line+=` 중간 ${r.mid} → 기말 ${r.fin} (${tag})`;}
+          else if(r.mid!=null){line+=` 중간 ${r.mid}`;}
+          else if(r.fin!=null){line+=` 기말 ${r.fin}`;}
+          out+=line.replace(/\s+$/,'')+'\n';
+        }else{
+          out+=(`${r.name} ${r.score!=null?r.score:''}`).replace(/\s+$/,'')+'\n';
+        }
+      });
     });
   });
   if(!any)out+='\n해당하는 학생이 없습니다. (학생의 수강과목 지정 또는 필터를 확인하세요)';
