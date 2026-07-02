@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="학생관리">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#2a2620">
@@ -101,31 +101,46 @@ select.mini,input.mini{padding:6px 8px}
 .badgeN{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700}
 @media(max-width:820px){.side{width:150px}.grid2{grid-template-columns:1fr}}
 @media(max-width:760px){
+  html{-webkit-text-size-adjust:100%}
   .app{flex-direction:column}
-  .side{width:100%;height:auto;position:sticky;top:0;padding:6px 8px;z-index:30}
-  .side .logo{padding:2px 8px;font-size:15px}
-  .side .logo small{display:inline;margin-left:8px;margin-top:0;font-size:11px}
-  .nav{display:flex;overflow-x:auto;gap:2px;-webkit-overflow-scrolling:touch}
-  .nav a{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;padding:9px 13px}
-  .nav a.active{border-left:none;border-bottom-color:var(--accent);background:#3a352d}
-  .side .foot{position:static;padding:3px 8px 0;font-size:10px;text-align:left}
+  .side{
+    width:100%;height:auto;position:sticky;top:0;z-index:30;
+    padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 8px;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .side .logo{padding:0 2px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side .logo small{display:inline;margin:0 0 0 8px;font-size:11px;color:#b3ab9c}
+  .nav{display:flex;flex-wrap:wrap;gap:6px}
+  .nav a{
+    flex:0 0 auto;white-space:nowrap;border:1px solid #4a443a;border-radius:9px;
+    padding:10px 14px;font-size:14px;color:#cfc8ba;background:#33302a;
+  }
+  .nav a.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .side .foot{position:static;padding:0 2px;font-size:11px;text-align:left}
+  .foot-hint{display:none}
   .main{padding:14px 12px;max-width:100%}
   .page h2{font-size:18px}
+  .page .sub{font-size:12px}
   .card{padding:14px}
   .grid2{grid-template-columns:1fr}
-  .card .field{flex:1 1 100%}
+  input,select,textarea{font-size:16px}
+  .row{gap:8px}
+  .card .field{flex:1 1 100%;min-width:0}
   .card .field>input,.card .field>select,.card .field>textarea{width:100%}
   .mini,.miniw{width:100%}
   [id$="Wrap"]{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .card table{min-width:600px}
+  .subjbox{gap:8px}
+  .subjtoggle,.qbtn{padding:9px 13px;font-size:14px}
+  .settrow{flex-wrap:wrap}
   .settrow label{width:100%}
   .settrow input{width:100%!important}
-  .btn{padding:10px 14px}
-  .btn.sm{padding:7px 11px}
+  .btn{padding:11px 15px}
+  .btn.sm{padding:8px 12px;font-size:13px}
   .totbar{gap:14px;padding:12px 14px}
   .totbar .v{font-size:18px}
   .modal{padding:16px}
-  .msg{white-space:pre-wrap;word-break:break-word}
+  .msg{white-space:pre-wrap;word-break:break-word;font-size:13px}
 }
 </style>
 </head>
@@ -140,7 +155,7 @@ select.mini,input.mini{padding:6px 8px}
       <a data-page="board">가채점표</a>
       <a data-page="settings">설정 · 백업</a>
     </nav>
-    <div class="foot"><span id="syncFoot">로컬 저장</span><br>설정에서 클라우드 동기화<br>연결을 권장합니다.</div>
+    <div class="foot"><span id="syncFoot">로컬 저장</span><span class="foot-hint"><br>설정에서 클라우드 동기화<br>연결을 권장합니다.</span></div>
   </aside>
 
   <main class="main">
