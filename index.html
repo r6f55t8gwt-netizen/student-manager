@@ -134,7 +134,10 @@ select.mini,input.mini{padding:6px 8px}
   .subjtoggle,.qbtn{padding:9px 13px;font-size:14px}
   .settrow{flex-wrap:wrap}
   .settrow label{width:100%}
-  .settrow input{width:100%!important}
+  .settrow input:not([type=checkbox]):not([type=radio]){width:100%!important}
+  .checkline{flex-wrap:nowrap;align-items:center}
+  .checkline input[type=checkbox]{flex:0 0 auto;width:auto!important}
+  .checkline .small{white-space:normal}
   .btn{padding:11px 15px}
   .btn.sm{padding:8px 12px;font-size:13px}
   .totbar{gap:14px;padding:12px 14px}
