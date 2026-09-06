@@ -737,8 +737,20 @@ select.mini,input.mini{padding:6px 8px}
           ① <b>인사말·학원명·서명을 쓰지 말라</b>는 지시는 남겨두세요. 그 부분은 [개별] 탭의 머리말·맺음말이 정확히 채웁니다.<br>
           ② <b>중괄호를 쓰지 말라</b>는 지시도 남겨두세요. 없으면 <code>{학원명}</code> 같은 글자가 문자에 그대로 갈 수 있습니다.
         </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label>단체 문자와 상용구 AI 지시문 <span class="small">단체 안내와 상용구를 만들 때 AI에게 주는 지시 전체입니다. 여기는 <b>머리말과 맺음말까지 AI가 씁니다.</b></span></label>
+          <textarea id="set_aitplbulk" class="msg" style="min-height:300px" oninput="checkAiTemplateBulk()"></textarea>
+        </div>
+        <div id="aiTplBulkWarn"></div>
+        <div class="note" style="border-left:3px solid var(--accent2);background:#eef3f9;padding:10px 13px;border-radius:0 8px 8px 0;margin:0 0 12px;font-size:12.5px">
+          <b>개별 지시문과 반대입니다</b><br>
+          ① 여기서는 <b>중괄호를 씁니다.</b> <code>{학원명}</code> <code>{선생님}</code> <code>{학생명}</code> 은 보낼 때 사람마다 실제 값으로 바뀝니다. 학원명이나 이름을 직접 적으라고 고치지 마세요.<br>
+          ② 머리말·맺음말도 AI가 씁니다. 문장을 바꾸고 싶으면 지시문 안의 그 문장을 직접 고치면 됩니다.
+        </div>
         <div class="row"><button class="btn primary" onclick="saveSettings()">저장</button>
-          <button class="btn ghost" onclick="resetAiTemplate()">기본 지시문으로 되돌리기</button></div>
+          <button class="btn ghost" onclick="resetAiTemplate()">개별 지시문 되돌리기</button>
+          <button class="btn ghost" onclick="resetAiTemplateBulk()">단체 지시문 되돌리기</button></div>
       </div>
 
       <div class="card">
@@ -785,11 +797,11 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 14 · 2026-09-06 (학년·학교 구분 · 성적 메모 넣기)';
+const APP_VERSION='빌드 15 · 2026-09-06 (단체 AI 지시문 편집)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
-            teacherName:'',myPhone:'',senderNumber:'',aiModel:'gpt-4o-mini',aiSystem:''},
+            teacherName:'',myPhone:'',senderNumber:'',aiModel:'gpt-4o-mini',aiSystem:'',aiSystemBulk:''},
   subjects:['수학','영어','국어','과학'],
   halls:['1관','2관','3관'],
   presets:[],
@@ -1395,6 +1407,7 @@ function renderSettings(){
     $('set_sender').value=fmtPhone(s.senderNumber||'');
     $('set_aimodel').value=s.aiModel||'gpt-4o-mini';
     $('set_aitpl').value=s.aiSystem||'';
+    if($('set_aitplbulk'))$('set_aitplbulk').value=s.aiSystemBulk||'';
     fillAiModelList();
     const _h=$('aiModelHint');
     if(_h&&(data.aiModels||[]).length)_h.textContent=`저장된 목록 ${data.aiModels.length}개`;
@@ -1416,6 +1429,7 @@ function saveSettings(){
     s.senderNumber=digitsOnly($('set_sender').value);
     s.aiModel=$('set_aimodel').value.trim()||'gpt-4o-mini';
     s.aiSystem=$('set_aitpl').value;
+    if($('set_aitplbulk'))s.aiSystemBulk=$('set_aitplbulk').value;
   }
   save();$('acaName').textContent=s.academyName;previewCalc();
   if(typeof initSms==='function')initSms();
@@ -2236,6 +2250,48 @@ function notesSelectWithMemo(){
 const SMS_VARS=['학생명','이름','이름이','학년','학교','관','과목','요일','학원명','선생님','학부모호칭'];
 /* AI 지시문 전체 — 설정에서 통째로 고칠 수 있다.
    머리말·맺음말은 아래 상수로 앱이 직접 붙인다(치환이라 항상 정확). */
+const DEFAULT_AI_BULK=`당신은 한국 학원 선생님이 학부모에게 보낼 단체 안내 문자를 쓰는 조수입니다.
+같은 안내라도 학부모마다 자기 아이 이름이 들어간 개별 문자로 나갑니다.
+
+[반드시 이 틀을 지킵니다]
+[{학원명}] 안녕하세요, 과학을 가르치는 {선생님}입니다.
+
+(안내 내용)
+
+믿고 맡겨주셔서 감사합니다. 항상 최선을 다하겠습니다.
+
+감사합니다.
+{선생님} 드림
+
+- 첫 줄(머리말)과 마지막 세 줄(맺음말)은 위 문장 그대로 씁니다. 바꾸거나 빼지 마세요.
+- 안내 내용만 상황에 맞게 새로 씁니다.
+
+[줄바꿈 — 읽기 편하게]
+- 머리말 다음에 빈 줄을 하나 넣습니다.
+- 안내 내용이 두 문단 이상이면 문단 사이마다 빈 줄을 하나 넣습니다.
+- 맺음말 앞에도 빈 줄을 하나 넣습니다.
+- 빈 줄은 한 번에 하나만 넣습니다. 두 줄 이상 비우지 마세요.
+- 한 문단은 2~3문장을 넘기지 않습니다.
+
+[문체]
+- 학부모께 드리는 글입니다. 예의 바르되 딱딱하지 않게, 살갑고 따뜻하게 씁니다.
+- 아이를 맡아 정성껏 가르치고 있다는 신뢰가 느껴지도록 씁니다.
+- 이모지 금지. 느낌표 남발 금지. 과장된 표현 금지.
+
+[절대 금지]
+- 가운뎃점(·)을 절대 쓰지 마세요. 여러 항목을 나열할 때는 쉼표나 줄바꿈을 씁니다.
+- 알려주지 않은 날짜, 시간, 금액, 장소를 지어내지 마세요. 필요하면 (날짜)처럼 빈칸으로 남깁니다.
+
+[개별화]
+- 안내 내용 안에 {학생명} 을 한 번 이상 넣습니다. 학부모마다 자기 아이 이름으로 바뀝니다.
+- 쓸 수 있는 자리표시자: {학생명} {이름} {이름이} {학년} {학교} {관} {과목} {요일} {학원명} {선생님} {학부모호칭}
+- 학원 이름은 {학원명}, 선생님 이름은 {선생님} 으로 씁니다. 실제 이름을 직접 쓰지 마세요.
+
+[분량]
+- 머리말과 맺음말을 뺀 안내 내용은 100~250자.
+
+결과는 완성된 문자 전문만 출력합니다. 설명, 따옴표, 코드블록 금지.`;
+
 const DEFAULT_AI_SYSTEM=`당신은 한국 학원 선생님이 학부모에게 보낼 문자의 본문을 쓰는 조수입니다.
 
 [가장 먼저]
@@ -2716,15 +2772,7 @@ async function aiDraftBulk(){
   }catch(e){toast('AI 실패: '+e.message);}
 }
 function aiBulkSystem(){
-  return `당신은 한국 학원의 학부모 안내 문자를 쓰는 조수입니다.
-규칙:
-- 학부모에게 보내는 안내 문자입니다. 존댓말, 정중하고 담백하게. 이모지 금지.
-- 중괄호 자리표시자를 써서 학생마다 개별화합니다. 쓸 수 있는 것: ${SMS_VARS.map(v=>'{'+v+'}').join(' ')}
-- 반드시 {학생명} 을 한 번 이상 포함합니다.
-- 학원명은 {학원명}, 선생님 이름은 {선생님} 으로 씁니다.
-- 사용자가 알려주지 않은 날짜·시간·금액은 지어내지 말고, 필요하면 (날짜)처럼 빈칸으로 남깁니다.
-- 120~250자.
-- 결과는 문자 본문만 출력합니다. 설명이나 머리말 금지.`;
+  return (data.settings.aiSystemBulk||'').trim()||DEFAULT_AI_BULK;
 }
 async function aiDraftTemplate(){
   const p=($('tplAiPrompt').value||'').trim();
@@ -2947,6 +2995,7 @@ function importPhones(){
 function migrateAiTemplate(){
   const st=data.settings;
   if(!st.aiSystem||!st.aiSystem.trim())st.aiSystem=DEFAULT_AI_SYSTEM;
+  if(!st.aiSystemBulk||!st.aiSystemBulk.trim())st.aiSystemBulk=DEFAULT_AI_BULK;
   const sd=smsData();
   if(sd.eachHead==null||sd.eachHead==='')sd.eachHead=DEFAULT_HEAD;
   if(sd.eachTail==null||sd.eachTail==='')sd.eachTail=DEFAULT_TAIL;
@@ -2958,6 +3007,25 @@ const AI_RAILS=`
 - 인사말, 머리말, 맺음말, 서명, 학원 이름, 선생님 이름을 쓰지 마세요.
   그 부분은 앱이 본문 앞뒤에 따로 붙입니다.
 - 중괄호 { } 를 쓰지 마세요.`;
+function resetAiTemplateBulk(){
+  confirmModal('단체 지시문 되돌리기','지금 적어둔 단체 상용구 AI 지시문을 지우고 기본값으로 되돌립니다.',()=>{
+    data.settings.aiSystemBulk=DEFAULT_AI_BULK;save();
+    if($('set_aitplbulk'))$('set_aitplbulk').value=DEFAULT_AI_BULK;
+    checkAiTemplateBulk();toast('기본 지시문으로 되돌렸습니다');
+  });
+}
+/* 단체 지시문에서 빠지면 곤란한 것들을 알려준다 */
+function checkAiTemplateBulk(){
+  const box=$('aiTplBulkWarn'); if(!box)return;
+  const t=($('set_aitplbulk')?$('set_aitplbulk').value:'')||'';
+  const miss=[];
+  if(t.indexOf('{학생명}')<0)miss.push('{학생명} 을 넣으라는 지시');
+  if(t.indexOf('{학원명}')<0)miss.push('학원명을 {학원명} 으로 쓰라는 지시');
+  if(!/본문만|전문만|설명.*금지/.test(t))miss.push('문자 본문만 출력하라는 지시');
+  box.innerHTML=miss.length
+    ?`<div class="warnbar">지시문에 다음이 빠져 있습니다 — ${miss.join(', ')}.
+       빠지면 문자에 설명이 섞이거나 개별화가 안 될 수 있습니다.</div>`:'';
+}
 function checkAiTemplate(){
   const box=$('aiTplWarn');if(!box)return;
   const t=data.settings.aiSystem||'';
@@ -2984,7 +3052,7 @@ function initSms(){
   if(hs){const cur=hs.value;hs.innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');hs.value=cur||'';}
   fillSchoolSelect('sms_school','전체 학교');
   renderVarChips();renderTemplates();renderSmsTargets();checkBulkBody();renderSmsPreview();renderNotesPage();
-  checkAiTemplate();
+  checkAiTemplate();checkAiTemplateBulk();
   const warn=$('smsSetupWarn');
   if(warn)warn.innerHTML=cloud.url?'':'<div class="errbar">문자 발송은 <b>클라우드(구글시트) 연결</b>이 있어야 동작합니다. [설정 · 백업]에서 먼저 연결하세요.</div>';
 }
