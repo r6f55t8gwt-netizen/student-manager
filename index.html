@@ -200,6 +200,20 @@ select.mini,input.mini{padding:6px 8px}
 .histitem .hh{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:7px}
 .histitem .hs{margin-top:7px;font-size:11.5px;color:var(--muted);line-height:1.5}
 @media(max-width:760px){ .noteitem .nx{opacity:1} }
+/* ===== 성적 → 메모 ===== */
+.scorepick{border:1px solid var(--line);border-radius:9px;background:#faf8f4;padding:10px 11px;margin-bottom:10px}
+.scorepick .sph{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:7px}
+.scorepick .pick{background:#fff}
+.scorepick .tplchip{background:#fff}
+/* ===== 받는 사람 묶음 (학년 → 학교) ===== */
+.pickgrp{border:1px solid var(--line);border-radius:10px;margin-bottom:9px;overflow:hidden}
+.pickgrp:last-child{margin-bottom:0}
+.pgh{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:7px 11px;background:#faf8f4;border-bottom:1px solid var(--line);font-size:12.5px}
+.pgh .sch{font-weight:600}
+.pgh .gr{color:#6b6558}
+.pgh .pga{margin-left:auto;display:flex;gap:4px}
+.pickgrp .pickrow{padding:9px 11px}
+.pgsum{font-size:12px;color:var(--muted);margin:8px 0 2px;line-height:1.6}
 /* ===== 발송 대기열 · 이력 목록 ===== */
 .qlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .qitem{padding:10px 12px;border-bottom:1px solid var(--line);background:#fff;min-width:0}
@@ -226,6 +240,8 @@ select.mini,input.mini{padding:6px 8px}
   .noteitem .nx{flex:0 0 100%;justify-content:flex-end}
   .noteitem .nx .qbtn{padding:5px 9px;font-size:12px}
   .pick{padding:7px 12px;font-size:13px}
+  .pgh{font-size:12px;padding:7px 9px}
+  .pickgrp .pickrow{padding:8px 9px}
   .len{white-space:normal}
 }
 .built{overflow-wrap:anywhere}
@@ -464,6 +480,7 @@ select.mini,input.mini{padding:6px 8px}
           <div class="row" style="margin:0">
             <input id="note_q" class="mini" placeholder="이름/학교 검색" oninput="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
             <select id="note_hall" class="mini" onchange="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
+            <select id="note_school" class="mini" onchange="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
             <select id="note_grade" class="mini" onchange="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
               <option value="">전체 학년</option>
               <option>초3</option><option>초4</option><option>초5</option><option>초6</option>
@@ -500,11 +517,12 @@ select.mini,input.mini{padding:6px 8px}
               <option>중1</option><option>중2</option><option>중3</option>
               <option>고1</option><option>고2</option><option>고3</option><option>N수</option>
             </select>
+            <select id="sms_school" class="mini" onchange="renderSmsTargets()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
             <button class="btn sm" onclick="smsSelectAll(true)">전체 선택</button>
             <button class="btn sm" onclick="smsSelectAll(false)">해제</button>
           </div>
         </div>
-        <div class="hint" style="margin-bottom:10px">재원생만 표시됩니다. 번호가 없는 학생은 선택할 수 없습니다.</div>
+        <div class="hint" style="margin-bottom:10px">재원생만 표시됩니다. <b>학년 → 학교</b> 순으로 묶여 있고, 묶음별로 한 번에 고를 수 있습니다. 번호가 없는 학생은 선택할 수 없습니다.</div>
         <div id="smsTargets"></div>
         <div id="smsNoPhone"></div>
       </div>
@@ -767,7 +785,7 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 12 · 2026-09-06 (모바일 최적화)';
+const APP_VERSION='빌드 14 · 2026-09-06 (학년·학교 구분 · 성적 메모 넣기)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
@@ -2049,6 +2067,61 @@ function histBlock(h){
   </div>`;
 }
 
+/* ---------- 성적 → 메모 ---------- */
+function scoresOf(sid){
+  return (data.scores||[]).filter(x=>x.studentId===sid)
+    .sort((a,b)=>examOrder(b)-examOrder(a)||String(a.subject).localeCompare(String(b.subject),'ko'));
+}
+function examKey(sc){return examOrder(sc);}
+function examTitle(sc){return `${sc.year}학년도 ${sc.semester}학기 ${sc.exam}고사`;}
+/* 시험 단위로 묶기 — 최근 것부터 */
+function examGroupsOf(sid){
+  const map=new Map();
+  scoresOf(sid).forEach(sc=>{
+    const k=examKey(sc);
+    if(!map.has(k))map.set(k,{key:k,title:examTitle(sc),items:[]});
+    map.get(k).items.push(sc);
+  });
+  return [...map.values()];
+}
+function scoreLine(sc){return `${examTitle(sc)} ${sc.subject} ${sc.score}점`;}
+function examLine(g){
+  return `${g.title} — ${g.items.map(x=>`${x.subject} ${x.score}점`).join(', ')}`;
+}
+function memoAddScore(id){
+  const sc=(data.scores||[]).find(x=>x.id===id); if(!sc)return;
+  if(addNoteFor(sc.studentId,scoreLine(sc)))afterMemoChange();
+}
+function memoAddExam(sid,key){
+  const g=examGroupsOf(sid).find(x=>String(x.key)===String(key)); if(!g)return;
+  if(addNoteFor(sid,examLine(g)))afterMemoChange();
+}
+function afterMemoChange(){
+  renderMemoModal();
+  if(typeof renderStudents==='function')renderStudents();
+  renderNotesPage();
+  if(typeof smsMode!=='undefined'&&smsMode==='each'&&typeof renderSmsEach==='function')renderSmsEach();
+  if(typeof renderSmsPreview==='function')renderSmsPreview();
+}
+/* 메모 창에 붙는 성적 고르기 영역 */
+function scorePickBox(sid){
+  const groups=examGroupsOf(sid);
+  if(!groups.length)
+    return `<div class="scorepick"><div class="sph">성적에서 가져오기</div>
+      <div class="small" style="color:var(--muted)">[성적 관리]에 등록된 점수가 없습니다.</div></div>`;
+  const recent=groups.slice(0,4);
+  const flat=scoresOf(sid).slice(0,16);
+  return `<div class="scorepick">
+    <div class="sph">성적에서 가져오기 <span class="small">— 누르면 메모 한 줄로 들어갑니다</span></div>
+    <div class="pickrow" style="margin-bottom:7px">${recent.map(g=>
+      `<button class="tplchip" onclick="memoAddExam('${sid}','${g.key}')" title="${esc(examLine(g))}">${esc(g.title)} 전체 <span class="g">${g.items.length}과목</span></button>`
+    ).join('')}</div>
+    <div class="pickrow">${flat.map(sc=>
+      `<span class="pick" onclick="memoAddScore('${sc.id}')">${esc(sc.subject)} ${sc.score}점 <span class="g">${esc(sc.year)} ${esc(sc.semester)}학기 ${esc(sc.exam)}</span></span>`
+    ).join('')}</div>
+  </div>`;
+}
+
 /* ---------- 메모 창 (학생 목록 · 메모 탭 공용) ---------- */
 let memoSid=null, memoTab='memo';
 function openMemo(sid,tab){
@@ -2076,6 +2149,7 @@ function renderMemoModal(){
         <input id="memoInput" placeholder="한 줄 적고 Enter" style="flex:1 1 auto;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px"
                onkeydown="if(event.key==='Enter')addMemoFromModal()">
         <button class="btn primary" onclick="addMemoFromModal()">추가</button></div>`;
+    h+=scorePickBox(memoSid);
     h+=un.length?`<div class="notelist">${un.map(n=>noteLine(n,'modal')).join('')}</div>`
       :'<div class="empty" style="padding:16px">쌓아둔 메모가 없습니다. 위에 한 줄씩 적어두면 나중에 문자로 통합됩니다.</div>';
   }else{
@@ -2094,12 +2168,16 @@ function notesCandidates(){
   const q=(($('note_q')&&$('note_q').value)||'').toLowerCase();
   const hall=$('note_hall')?$('note_hall').value:'';
   const grade=$('note_grade')?$('note_grade').value:'';
+  const school=$('note_school')?$('note_school').value:'';
   const only=$('note_only')?$('note_only').checked:false;
   return data.students.filter(s=>s.active
       &&(!hall||(s.hall||'')===hall)&&(!grade||s.grade===grade)
+      &&(typeof matchSchool==='function'?matchSchool(s,school):true)
       &&(!only||unsentCount(s.id)>0)
       &&(!q||s.name.toLowerCase().includes(q)||(s.school||'').toLowerCase().includes(q)))
-    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)
+              ||String(a.school||'').localeCompare(String(b.school||''),'ko')
+              ||a.name.localeCompare(b.name,'ko'));
 }
 function renderNotesPage(){
   const wrap=$('notesList'); if(!wrap)return;
@@ -2108,6 +2186,7 @@ function renderNotesPage(){
     hs.innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');
     hs.dataset.filled='1';
   }
+  if(typeof fillSchoolSelect==='function')fillSchoolSelect('note_school','전체 학교');
   const list=notesCandidates();
   const c=$('notesCount'); if(c)c.textContent=allNotes().length+'건 대기';
   if(!list.length){wrap.innerHTML='<div class="empty">해당하는 재원생이 없습니다.</div>';return;}
@@ -2116,7 +2195,7 @@ function renderNotesPage(){
     return `<div class="smsrow">
       <div class="who">
         <b>${esc(s.name)}</b>${un.length?` <span class="badgeN">${un.length}</span>`:''}
-        <div class="ph">${esc(s.grade||'')}${s.hall?' · '+esc(s.hall):''}</div>
+        <div class="ph">${esc(s.grade||'')}${s.school?' · '+esc(s.school):' · 학교 미입력'}${s.hall?' · '+esc(s.hall):''}</div>
       </div>
       <div class="body">
         <div class="row" style="margin:0">
@@ -2126,7 +2205,10 @@ function renderNotesPage(){
         </div>
         ${un.length?`<div class="notelist">${un.map(n=>noteLine(n,'page')).join('')}</div>`:''}
       </div>
-      <div class="smsact"><button class="btn sm" onclick="openMemo('${s.id}','hist')">이력 ${hn}</button></div>
+      <div class="smsact">
+        <button class="btn sm" onclick="openMemo('${s.id}','memo')">성적 넣기</button>
+        <button class="btn sm" onclick="openMemo('${s.id}','hist')">이력 ${hn}</button>
+      </div>
     </div>`;}).join('')+'</div>';
 }
 function quickAdd(sid){
@@ -2312,25 +2394,92 @@ async function aiChat(messages,opt){
 }
 
 /* ---------- 받는 사람 ---------- */
+function schoolOf(s){return String((s&&s.school)||'').trim();}
+function schoolLabel(s){return schoolOf(s)||'(학교 미입력)';}
+/* 학교 목록 — 실제 등록된 학교만, 가나다순 */
+function schoolsInUse(){
+  return [...new Set(data.students.filter(s=>s.active).map(schoolOf).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ko'));
+}
+function fillSchoolSelect(id,allLabel){
+  const el=$(id); if(!el)return;
+  const cur=el.value;
+  el.innerHTML=`<option value="">${allLabel}</option>`
+    +schoolsInUse().map(x=>`<option>${esc(x)}</option>`).join('')
+    +'<option value="__none__">(학교 미입력)</option>';
+  el.value=[...el.options].some(o=>o.value===cur)?cur:'';
+}
+function matchSchool(s,f){
+  if(!f)return true;
+  if(f==='__none__')return !schoolOf(s);
+  return schoolOf(s)===f;
+}
 function smsCandidates(){
   const hall=$('sms_hall')?$('sms_hall').value:'';
   const grade=$('sms_grade')?$('sms_grade').value:'';
-  return data.students.filter(s=>s.active&&(!hall||(s.hall||'')===hall)&&(!grade||s.grade===grade))
-    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+  const school=$('sms_school')?$('sms_school').value:'';
+  return data.students.filter(s=>s.active&&(!hall||(s.hall||'')===hall)&&(!grade||s.grade===grade)&&matchSchool(s,school))
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)
+              ||schoolLabel(a).localeCompare(schoolLabel(b),'ko')
+              ||a.name.localeCompare(b.name,'ko'));
+}
+/* 학년 → 학교 로 묶는다 */
+let smsGroups=[];
+function groupTargets(list){
+  const map=new Map();
+  list.forEach(s=>{
+    const k=(s.grade||'(학년 미입력)')+' › '+schoolLabel(s);
+    if(!map.has(k))map.set(k,{school:schoolLabel(s),grade:s.grade||'(학년 미입력)',students:[]});
+    map.get(k).students.push(s);
+  });
+  return [...map.values()];
 }
 function renderSmsTargets(){
+  fillSchoolSelect('sms_school','전체 학교');
   const list=smsCandidates();
   const wrap=$('smsTargets');
   if(!list.length){wrap.innerHTML='<div class="empty">해당 조건의 재원생이 없습니다.</div>';$('smsNoPhone').innerHTML='';updateSelCount();return;}
-  wrap.innerHTML='<div class="pickrow">'+list.map(s=>{
-    const ok=!!digitsOnly(s.parentPhone);
-    if(!ok)return `<span class="pick nophone" title="학부모 번호가 없습니다">${esc(s.name)} <span class="g">번호없음</span></span>`;
-    return `<span class="pick ${smsSel.has(s.id)?'on':''}" onclick="toggleSmsPick('${s.id}')">${esc(s.name)} <span class="g">${esc(s.grade||'')}</span></span>`;
-  }).join('')+'</div>';
+  smsGroups=groupTargets(list);
+  wrap.innerHTML=smsGroups.map((g,i)=>{
+    const usable=g.students.filter(s=>digitsOnly(s.parentPhone));
+    const on=usable.length&&usable.every(s=>smsSel.has(s.id));
+    const picked=usable.filter(s=>smsSel.has(s.id)).length;
+    return `<div class="pickgrp">
+      <div class="pgh">
+        <span class="sch">${esc(g.grade)}</span>
+        <span class="gr">· ${esc(g.school)}</span>
+        <span class="badgeN">${usable.length}명${picked?` / ${picked} 선택`:''}</span>
+        <span class="pga">
+          <button class="qbtn" onclick="smsPickGroup(${i},${on?'false':'true'})">${on?'해제':'전체'}</button>
+        </span>
+      </div>
+      <div class="pickrow">${g.students.map(s=>{
+        if(!digitsOnly(s.parentPhone))
+          return `<span class="pick nophone" title="학부모 번호가 없습니다">${esc(s.name)} <span class="g">번호없음</span></span>`;
+        return `<span class="pick ${smsSel.has(s.id)?'on':''}" onclick="toggleSmsPick('${s.id}')">${esc(s.name)}</span>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
   const missing=list.filter(s=>!digitsOnly(s.parentPhone));
-  $('smsNoPhone').innerHTML=missing.length
-    ?`<div class="warnbar">학부모 번호가 없어 제외된 학생 ${missing.length}명: ${missing.map(s=>esc(s.name)).join(', ')} — [학생 관리]에서 번호를 넣어주세요.</div>`:'';
+  $('smsNoPhone').innerHTML=(missing.length
+    ?`<div class="warnbar">학부모 번호가 없어 제외된 학생 ${missing.length}명: ${missing.map(s=>esc(s.name)).join(', ')} — [학생 관리]에서 번호를 넣어주세요.</div>`:'')
+    +selectionSummary();
   updateSelCount();
+}
+/* 지금 고른 사람을 학교·학년별로 요약 */
+function selectionSummary(){
+  const sel=selectedStudents();
+  if(!sel.length)return '';
+  const parts=groupTargets(sel).map(g=>`${esc(g.grade)} ${esc(g.school)} ${g.students.length}명`);
+  return `<div class="pgsum">고른 사람 — ${parts.join(' · ')}</div>`;
+}
+function smsPickGroup(i,on){
+  const g=smsGroups[i]; if(!g)return;
+  g.students.forEach(s=>{
+    if(!digitsOnly(s.parentPhone))return;
+    if(on)smsSel.add(s.id);else smsSel.delete(s.id);
+  });
+  renderSmsTargets();if(smsMode==='each')renderSmsEach();renderSmsPreview();
 }
 function toggleSmsPick(id){
   if(smsSel.has(id))smsSel.delete(id);else smsSel.add(id);
@@ -2346,7 +2495,9 @@ function smsSelectAll(on){
 function updateSelCount(){const e=$('smsSelCount');if(e)e.textContent=smsSel.size+'명';}
 function selectedStudents(){
   return [...smsSel].map(studentById).filter(s=>s&&digitsOnly(s.parentPhone))
-    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)
+              ||schoolLabel(a).localeCompare(schoolLabel(b),'ko')
+              ||a.name.localeCompare(b.name,'ko'));
 }
 
 /* ---------- 모드 ---------- */
@@ -2831,6 +2982,7 @@ function initSms(){
   if($('eachTail'))$('eachTail').value=sd.eachTail||'';
   const hs=$('sms_hall');
   if(hs){const cur=hs.value;hs.innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');hs.value=cur||'';}
+  fillSchoolSelect('sms_school','전체 학교');
   renderVarChips();renderTemplates();renderSmsTargets();checkBulkBody();renderSmsPreview();renderNotesPage();
   checkAiTemplate();
   const warn=$('smsSetupWarn');
