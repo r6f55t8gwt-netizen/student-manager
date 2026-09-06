@@ -155,6 +155,52 @@ select.mini,input.mini{padding:6px 8px}
   .modal{padding:16px}
   .msg{white-space:pre-wrap;word-break:break-word;font-size:13px}
 }
+
+/* ===== 문자 발송 ===== */
+.smsgrid{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.smsrow{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-bottom:1px solid var(--line);background:#fff}
+.smsrow:last-child{border-bottom:none}
+.smsrow.off{opacity:.45}
+.smsrow .who{flex:0 0 150px;min-width:0}
+.smsrow .who b{font-weight:600}
+.smsrow .who .ph{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.smsrow .body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}
+.smsrow textarea{width:100%;min-height:56px;border:1px solid var(--line);border-radius:8px;padding:8px 9px;resize:vertical;font-size:13px;line-height:1.45}
+.built{white-space:pre-wrap;background:#faf8f4;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.55;word-break:break-word}
+.built.empty{color:var(--muted);font-style:italic}
+.smsrow .smsact{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.pickrow{display:flex;flex-wrap:wrap;gap:6px}
+.pick{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:20px;padding:5px 11px;font-size:12.5px;cursor:pointer;user-select:none}
+.pick.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pick.nophone{border-style:dashed;color:var(--danger);background:#fdf6f5;cursor:not-allowed}
+.pick .g{font-size:11px;opacity:.75}
+.len{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.len.over{color:var(--warn);font-weight:600}
+.warnbar{background:#fdf1e3;border:1px solid #f0dcc0;color:#8a6420;border-radius:9px;padding:9px 12px;font-size:12.5px;margin:8px 0}
+.errbar{background:#faeeec;border:1px solid #e6c4c0;color:var(--danger);border-radius:9px;padding:9px 12px;font-size:12.5px;margin:8px 0}
+.okbar{background:#e7f0e9;border:1px solid #c7ddcd;color:var(--good);border-radius:9px;padding:9px 12px;font-size:12.5px;margin:8px 0}
+.aiwait{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tplchip{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;font-size:12.5px;cursor:pointer}
+.tplchip:hover{border-color:var(--accent);color:var(--accent)}
+/* ===== 학생 메모 · 이력 ===== */
+.notelist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:#fbfaf7;overflow:hidden}
+.noteitem{display:flex;align-items:baseline;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);font-size:12.5px}
+.noteitem:last-child{border-bottom:none}
+.noteitem .nd{flex:0 0 auto;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;min-width:30px}
+.noteitem .nt{flex:1 1 auto;min-width:0;line-height:1.5;word-break:break-word}
+.noteitem .nx{flex:0 0 auto;display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.noteitem:hover .nx{opacity:1}
+.histlist{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow:auto}
+.histitem{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
+.histitem .hh{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:7px}
+.histitem .hs{margin-top:7px;font-size:11.5px;color:var(--muted);line-height:1.5}
+@media(max-width:760px){ .noteitem .nx{opacity:1} }
+@media(max-width:760px){
+  .smsrow{flex-direction:column;gap:7px}
+  .smsrow .who{flex:1 1 auto}
+  .smsrow .smsact{flex-direction:row;align-items:center}
+}
 </style>
 </head>
 <body>
@@ -164,6 +210,8 @@ select.mini,input.mini{padding:6px 8px}
     <nav class="nav" id="nav">
       <a data-page="students" class="active">학생 관리</a>
       <a data-page="monthly">월별 정산</a>
+      <a data-page="notes">메모</a>
+      <a data-page="sms">문자 발송</a>
       <a data-page="scores">성적 관리</a>
       <a data-page="board">가채점표</a>
       <a data-page="settings">설정 · 백업</a>
@@ -201,6 +249,15 @@ select.mini,input.mini{padding:6px 8px}
           <div class="field"><label>마지막 수업일(퇴원 시)</label><input id="s_end" type="date"></div>
           <div class="field"><label>기본 월 수강료(원)</label><input id="s_tuition" type="number" class="mini" placeholder="예: 280000"></div>
           <div class="field"><label>정산 그룹(선택)</label><input id="s_feegroup" placeholder="예: 고2 2과목" list="feeGroupList"></div>
+          <div class="field"><label>학부모 연락처</label><input id="s_pphone" inputmode="tel" placeholder="010-0000-0000"></div>
+          <div class="field"><label>학부모 호칭</label>
+            <select id="s_plabel">
+              <option value="학부모님">학부모님</option>
+              <option value="어머님">어머님</option>
+              <option value="아버님">아버님</option>
+            </select>
+          </div>
+          <div class="field"><label>학생 연락처(선택)</label><input id="s_sphone" inputmode="tel" placeholder="010-0000-0000"></div>
         </div>
         <div class="hint">정산 그룹을 비우면 자동으로 <b>학년+관</b>(관 있으면) 또는 <b>학년+과목수</b>로 묶입니다. 예: 고1은 관을 지정 → "고1 1관", 고2는 관 비움 → "고2 2과목".</div>
         <div class="field">
@@ -233,6 +290,18 @@ select.mini,input.mini{padding:6px 8px}
           </div>
         </div>
         <div id="studTableWrap"></div>
+      </div>
+
+      <div class="card">
+        <h3>학부모 번호 일괄 입력</h3>
+        <div class="small" style="margin-bottom:8px">엑셀·시트에서 <b>이름</b>과 <b>번호</b> 두 열을 그대로 복사해 붙여넣으세요. 쉼표·탭·여러 칸 띄어쓰기 모두 됩니다. 이름이 같은 학생을 찾아 번호를 채웁니다.</div>
+        <textarea id="phoneBulk" class="msg" style="min-height:110px" placeholder="홍길동	010-1234-5678
+김철수, 010-2222-3333"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn primary" onclick="importPhones()">번호 넣기</button>
+          <span class="checkline small"><input type="checkbox" id="phoneOverwrite" style="width:auto"> 이미 번호가 있어도 덮어쓰기</span>
+        </div>
+        <div id="phoneBulkResult"></div>
       </div>
     </section>
 
@@ -353,6 +422,152 @@ select.mini,input.mini{padding:6px 8px}
       </div>
     </section>
 
+
+    <!-- ============ NOTES ============ -->
+    <section class="page" id="page-notes">
+      <h2>메모</h2>
+      <div class="sub">학생별로 떠오를 때마다 한 줄씩 적어두면, 나중에 문자 보낼 때 <b>AI가 주제별로 묶어 한 통으로</b> 만들어 줍니다.</div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">쌓인 메모 <span class="badgeN" id="notesCount">0건 대기</span></h3>
+          <div class="row" style="margin:0">
+            <input id="note_q" class="mini" placeholder="이름/학교 검색" oninput="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+            <select id="note_hall" class="mini" onchange="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
+            <select id="note_grade" class="mini" onchange="renderNotesPage()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+              <option value="">전체 학년</option>
+              <option>초3</option><option>초4</option><option>초5</option><option>초6</option>
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option>고1</option><option>고2</option><option>고3</option><option>N수</option>
+            </select>
+            <span class="checkline small"><input type="checkbox" id="note_only" style="width:auto" onchange="renderNotesPage()"> 메모 있는 학생만</span>
+          </div>
+        </div>
+        <div class="row" style="margin:10px 0 4px">
+          <button class="btn primary" onclick="notesSelectWithMemo()">메모 쌓인 학생 전부 골라 문자 만들기 →</button>
+        </div>
+        <div class="hint" style="margin-bottom:10px">메모는 <b>보내기 전까지</b> 계속 쌓입니다. 발송에 쓰이면 목록에서 사라지고 학생별 [보낸 이력]으로 옮겨집니다.</div>
+        <div id="notesList"></div>
+      </div>
+    </section>
+
+    <!-- ============ SMS ============ -->
+    <section class="page" id="page-sms">
+      <h2>문자 발송</h2>
+      <div class="sub">학부모님께 문자를 보냅니다. <b>단체 안내도 학생 이름이 각각 들어간 개별 문자</b>로 한 명씩 나갑니다.</div>
+
+      <div id="smsSetupWarn"></div>
+
+      <!-- ① 받는 사람 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">① 받는 사람 <span class="badgeN" id="smsSelCount">0명</span></h3>
+          <div class="row" style="margin:0">
+            <select id="sms_hall" class="mini" onchange="renderSmsTargets()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px"></select>
+            <select id="sms_grade" class="mini" onchange="renderSmsTargets()" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+              <option value="">전체 학년</option>
+              <option>초3</option><option>초4</option><option>초5</option><option>초6</option>
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option>고1</option><option>고2</option><option>고3</option><option>N수</option>
+            </select>
+            <button class="btn sm" onclick="smsSelectAll(true)">전체 선택</button>
+            <button class="btn sm" onclick="smsSelectAll(false)">해제</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:10px">재원생만 표시됩니다. 번호가 없는 학생은 선택할 수 없습니다.</div>
+        <div id="smsTargets"></div>
+        <div id="smsNoPhone"></div>
+      </div>
+
+      <!-- ② 내용 -->
+      <div class="card">
+        <h3>② 보낼 내용</h3>
+        <div class="subjbox" style="margin-bottom:12px">
+          <button class="subjtoggle on" id="smsModeBulk" onclick="setSmsMode('bulk')">단체 — 같은 안내</button>
+          <button class="subjtoggle" id="smsModeEach" onclick="setSmsMode('each')">개별 — 학생마다 다른 내용</button>
+        </div>
+
+        <!-- 단체 -->
+        <div id="smsBulkBox">
+          <div class="field">
+            <label>상용구 <span class="small">(클릭하면 아래에 불러옵니다)</span></label>
+            <div class="pickrow" id="tplChips"></div>
+          </div>
+          <div class="field">
+            <label>본문 <span class="small">중괄호 항목은 학생마다 자동으로 바뀝니다</span></label>
+            <textarea id="smsBody" class="msg" style="min-height:150px" oninput="onBulkInput()" placeholder="예) {학생명} 학생 {학부모호칭}, 안녕하세요. {학원명}입니다."></textarea>
+          </div>
+          <div class="pickrow" id="varChips" style="margin-bottom:8px"></div>
+          <div id="smsBodyWarn"></div>
+          <div class="row">
+            <button class="btn blue" onclick="aiPolishBulk()">✨ AI로 다듬기</button>
+            <button class="btn" onclick="aiDraftBulk()">✨ 한 줄로 초안 만들기</button>
+            <button class="btn" onclick="saveAsTemplate()">＋ 상용구로 저장</button>
+            <span class="len" id="smsBodyLen"></span>
+          </div>
+        </div>
+
+        <!-- 개별 -->
+        <div id="smsEachBox" style="display:none">
+          <div class="hint" style="margin-bottom:10px">[메모] 탭에 쌓아둔 <b>아직 안 보낸 메모</b>가 학생별로 모여 있습니다. <b>AI로 정리</b>를 누르면 여러 날짜의 메모를 주제별로 묶어 한 통의 학부모 문자로 만들어 줍니다. 메모에 없는 내용은 지어내지 않습니다. <b>발송하면 쓰인 메모는 지워지고 [보낸 이력]에 남습니다.</b></div>
+          <div class="row" style="margin-bottom:10px">
+            <button class="btn blue" onclick="aiPolishEachAll()">✨ 선택한 학생 전부 AI로 정리</button>
+            <button class="btn" onclick="clearEachBuilt()">정리 결과 비우기</button>
+          </div>
+          <div class="field">
+            <label>공통 머리말 / 맺음말 <span class="small">(비워도 됩니다 · 개별 본문 앞뒤에 붙습니다)</span></label>
+            <div class="row">
+              <input id="eachHead" placeholder="예: [{학원명}] {학생명} 학생 {학부모호칭}" oninput="saveEachFix()" style="flex:1 1 260px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+              <input id="eachTail" placeholder="예: 감사합니다. {선생님} 드림" oninput="saveEachFix()" style="flex:1 1 260px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+            </div>
+          </div>
+          <div id="smsEachList"></div>
+        </div>
+      </div>
+
+      <!-- ③ 미리보기 · 발송 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">③ 미리보기 · 발송</h3>
+          <button class="btn sm" onclick="renderSmsPreview()">미리보기 새로고침</button>
+        </div>
+        <div id="smsPreview"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" onclick="smsSend()">📨 확정 발송</button>
+          <button class="btn" onclick="smsSendTest()">내 번호로 테스트 1건</button>
+          <button class="btn ghost" onclick="smsCopyManual()">수동 발송용 목록 복사</button>
+        </div>
+        <div class="hint">확정을 누르면 대기열에 올라가고, 맥의 브리지가 몇 초 안에 순서대로 보냅니다. 통신사 차단을 피하려고 한 건씩 간격을 두고 나갑니다.</div>
+      </div>
+
+      <!-- 상용구 관리 -->
+      <div class="card">
+        <h3>상용구 관리</h3>
+        <div class="small" style="margin-bottom:10px">개강·휴강·보강·시험 안내처럼 자주 쓰는 문구를 저장해 둡니다.</div>
+        <div id="tplManage"></div>
+        <div class="divider"></div>
+        <div class="field">
+          <label>새 상용구 — 한 줄로 적으면 AI가 완성합니다</label>
+          <div class="row">
+            <input id="tplAiPrompt" placeholder="예: 다음 주 화요일 휴강, 목요일 보강 안내" style="flex:1 1 300px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+            <button class="btn blue" onclick="aiDraftTemplate()">✨ 상용구 만들기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 이력 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">발송 대기열 · 이력</h3>
+          <div class="row" style="margin:0">
+            <button class="btn sm" onclick="smsRefreshQueue()">새로고침</button>
+            <button class="btn sm danger" onclick="smsCancelPending()">대기 중 전부 취소</button>
+          </div>
+        </div>
+        <div id="smsQueue"><div class="empty">새로고침을 눌러 확인하세요.</div></div>
+      </div>
+    </section>
+
     <!-- ============ SETTINGS ============ -->
     <section class="page" id="page-settings">
       <h2>설정 · 백업</h2>
@@ -442,6 +657,20 @@ select.mini,input.mini{padding:6px 8px}
       </div>
 
       <div class="card">
+        <h3>문자 · AI 설정</h3>
+        <div class="settrow"><label>선생님 이름(서명)</label><input id="set_teacher" placeholder="예: 박수훈"></div>
+        <div class="settrow"><label>내 번호(테스트용)</label><input id="set_myphone" placeholder="01012345678"></div>
+        <div class="settrow"><label>AI 모델</label><input id="set_aimodel" placeholder="gpt-4o-mini"></div>
+        <div class="small" style="margin:6px 0 12px">ChatGPT 키는 브라우저가 아니라 <b>Apps Script 스크립트 속성</b>(OPENAI_API_KEY)에 둡니다. 이 페이지에는 키를 입력하지 않습니다.</div>
+        <div class="field">
+          <label>개별 문자 정형 틀 <span class="small">AI가 이 순서·형식으로 학부모 문자를 만듭니다. 괄호 안 설명은 결과에 나오지 않습니다.</span></label>
+          <textarea id="set_aitpl" class="msg" style="min-height:170px"></textarea>
+        </div>
+        <div class="row"><button class="btn primary" onclick="saveSettings()">저장</button>
+          <button class="btn ghost" onclick="resetAiTemplate()">정형 틀 기본값으로</button></div>
+      </div>
+
+      <div class="card">
         <h3>데이터 백업 / 복원</h3>
         <div class="small" style="margin-bottom:10px">데이터는 이 브라우저에만 저장됩니다. 컴퓨터를 바꾸거나 브라우저 정리 시 사라질 수 있으니 <b>정기적으로 백업 파일을 내려받으세요.</b></div>
         <div class="row">
@@ -460,6 +689,16 @@ select.mini,input.mini{padding:6px 8px}
 <datalist id="feeGroupList"></datalist>
 <div class="toast" id="toast"></div>
 
+
+<!-- 학생 메모 · 이력 창 -->
+<div class="modal-bg" id="memoBg">
+  <div class="modal" style="width:660px">
+    <h3 id="memoTitle"></h3>
+    <div id="memoBody"></div>
+    <div class="actions"><button class="btn primary" onclick="closeMemo()">닫기</button></div>
+  </div>
+</div>
+
 <!-- generic confirm modal -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
@@ -475,13 +714,18 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 4 · 2026-07-02 (홈화면 아이콘 · 로고)';
+const APP_VERSION='빌드 6 · 2026-09-06 (학생 메모 누적 · AI 통합 · 발송 이력)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
-  settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4},
+  settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
+            teacherName:'',myPhone:'',aiModel:'gpt-4o-mini',aiTemplate:''},
   subjects:['수학','영어','국어','과학'],
   halls:['1관','2관','3관'],
   presets:[],
+  templates:[],
+  sms:{bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{}},
+  notes:[],
+  history:[],
   students:[],
   monthly:{},   // "YYYY-MM": { [studentId]: {enrolled,amount,sessions,sessionsAuto} }
   scores:[]     // {id,studentId,year,gradeAtExam,semester,exam,subject,score}
@@ -492,9 +736,32 @@ const CLOUD_KEY='academy_cloud_v1';
 let cloud=loadCloud();
 function loadCloud(){try{const r=localStorage.getItem(CLOUD_KEY);if(r)return Object.assign({url:'',token:'',auto:true},JSON.parse(r));}catch(e){}return{url:'',token:'',auto:true};}
 function saveCloud(){localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));}
+function migrate(d){
+  const base=defaultData();
+  d.settings=Object.assign({},base.settings,d.settings||{});
+  d.templates=d.templates||[];
+  d.sms=Object.assign({bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{}},d.sms||{});
+  d.sms.memo=d.sms.memo||{}; d.sms.built=d.sms.built||{};
+  if(!Array.isArray(d.notes))d.notes=[];
+  if(!Array.isArray(d.history))d.history=[];
+  // 예전 자유 메모칸에 적어둔 내용을 메모 목록으로 옮긴다 (한 번만)
+  Object.keys(d.sms.memo).forEach(sid=>{
+    const t=String(d.sms.memo[sid]||'').trim();
+    if(t)t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>{
+      d.notes.push({id:uid(),studentId:sid,at:nowStamp(),ts:Date.now(),text:line});
+    });
+  });
+  d.sms.memo={};
+  (d.students||[]).forEach(s=>{
+    if(s.parentPhone==null)s.parentPhone='';
+    if(s.parentLabel==null)s.parentLabel='학부모님';
+    if(s.studentPhone==null)s.studentPhone='';
+  });
+  return d;
+}
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);return Object.assign(defaultData(),d);}}catch(e){}
-  return defaultData();
+  try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);return migrate(Object.assign(defaultData(),d));}}catch(e){}
+  return migrate(defaultData());
 }
 function save(){
   if(!suppressPush) data.updatedAt=Date.now();
@@ -600,11 +867,14 @@ function saveStudent(){
     name, hall:$('s_hall').value, grade:$('s_grade').value, school:$('s_school').value.trim(),
     subjects:[...selectedSubjects],
     weekday:$('s_weekday').value, startDate:$('s_start').value, endDate:$('s_end').value,
-    baseTuition:Number($('s_tuition').value)||0, feeGroup:$('s_feegroup').value.trim(), memo:$('s_memo').value.trim()
+    baseTuition:Number($('s_tuition').value)||0, feeGroup:$('s_feegroup').value.trim(), memo:$('s_memo').value.trim(),
+    parentPhone:digitsOnly($('s_pphone').value), parentLabel:$('s_plabel').value||'학부모님',
+    studentPhone:digitsOnly($('s_sphone').value)
   };
   if(editid){Object.assign(studentById(editid),obj);toast('수정되었습니다');}
   else{data.students.push(Object.assign({id:uid(),active:true},obj));toast('학생이 추가되었습니다');}
   save();resetStudentForm();renderStudents();refreshSchoolList();
+  if(typeof renderSmsTargets==='function')renderSmsTargets();
 }
 function editStudent(id){
   const s=studentById(id);
@@ -612,12 +882,15 @@ function editStudent(id){
   $('s_hall').value=s.hall||'';$('s_school').value=s.school||'';$('s_weekday').value=s.weekday??'';
   $('s_start').value=s.startDate||'';$('s_end').value=s.endDate||'';$('s_tuition').value=s.baseTuition||'';
   $('s_feegroup').value=s.feeGroup||'';$('s_memo').value=s.memo||'';selectedSubjects=[...(s.subjects||[])];
+  $('s_pphone').value=fmtPhone(s.parentPhone||'');$('s_plabel').value=s.parentLabel||'학부모님';
+  $('s_sphone').value=fmtPhone(s.studentPhone||'');
   renderSubjectToggles();
   $('studFormTitle').textContent='✎ 학생 수정';$('s_cancel').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function resetStudentForm(){
-  ['s_name','s_school','s_start','s_end','s_tuition','s_feegroup','s_memo','s_editid'].forEach(i=>$(i).value='');
+  ['s_name','s_school','s_start','s_end','s_tuition','s_feegroup','s_memo','s_editid','s_pphone','s_sphone'].forEach(i=>$(i).value='');
+  if($('s_plabel'))$('s_plabel').value='학부모님';
   $('s_grade').value='고1';$('s_weekday').value='';selectedSubjects=[];
   if($('s_hall'))$('s_hall').value=(data.halls[0]||'');
   renderSubjectToggles();$('studFormTitle').textContent='＋ 학생 추가';$('s_cancel').style.display='none';
@@ -656,10 +929,11 @@ function renderStudents(){
   $('studCount').textContent=data.students.filter(s=>s.active).length;
   const wrap=$('studTableWrap');
   if(!list.length){wrap.innerHTML='<div class="empty">학생이 없습니다. 위에서 추가하세요.</div>';return;}
-  let h='<table><thead><tr><th>이름</th><th>관</th><th>학년</th><th>학교</th><th>수강과목</th><th>수업요일</th><th>시작일</th><th class="num">기본수강료</th><th>상태</th><th></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>이름</th><th>학부모 연락처</th><th>관</th><th>학년</th><th>학교</th><th>수강과목</th><th>수업요일</th><th>시작일</th><th class="num">기본수강료</th><th>상태</th><th></th></tr></thead><tbody>';
   list.forEach(s=>{
     h+=`<tr class="${s.active?'':'inactive'}">
       <td><b>${esc(s.name)}</b><div class="small" style="color:var(--muted)">정산: ${esc(feeGroupOf(s))}</div>${s.memo?`<div class="small">${esc(s.memo)}</div>`:''}</td>
+      <td class="small">${s.parentPhone?`${esc(fmtPhone(s.parentPhone))} <span class="chip">${esc(s.parentLabel||'학부모님')}</span>`:'<span style="color:var(--danger)">미입력</span>'}</td>
       <td>${s.hall?`<span class="chip">${esc(s.hall)}</span>`:'-'}</td>
       <td>${esc(s.grade)}</td><td>${esc(s.school||'-')}</td>
       <td>${(s.subjects||[]).map(x=>`<span class="chip sub">${esc(x)}</span>`).join('')||'-'}</td>
@@ -668,6 +942,7 @@ function renderStudents(){
       <td class="num money">${s.baseTuition?won(s.baseTuition):'-'}</td>
       <td>${s.endDate?`<span class="tag man">종료 ${fmtStart(s.endDate)}</span>`:(s.active?'<span class="tag auto">재원</span>':'<span class="tag man">퇴원</span>')}</td>
       <td style="white-space:nowrap">
+        <button class="btn sm" onclick="openMemo('${s.id}')">메모${unsentCount(s.id)?' '+unsentCount(s.id):''}</button>
         <button class="btn sm" onclick="editStudent('${s.id}')">수정</button>
         <button class="btn sm" onclick="toggleActive('${s.id}')">${s.active?'퇴원':'복원'}</button>
         <button class="btn sm danger" onclick="deleteStudent('${s.id}')">삭제</button>
@@ -1040,6 +1315,12 @@ function renderSettings(){
   const s=data.settings;
   $('set_aca').value=s.academyName;$('set_ded').value=s.deduction;$('set_split').value=s.splitRatio;
   $('set_tax').value=s.taxRate;$('set_card').value=s.cardRate;$('set_spm').value=s.sessionsPerMonth;
+  if($('set_teacher')){
+    $('set_teacher').value=s.teacherName||'';
+    $('set_myphone').value=s.myPhone||'';
+    $('set_aimodel').value=s.aiModel||'gpt-4o-mini';
+    $('set_aitpl').value=s.aiTemplate||'';
+  }
   renderHallManage();renderHallSelectors();renderSubjManage();renderPresetManage();previewCalc();
   if($('cl_url')){$('cl_url').value=cloud.url;$('cl_token').value=cloud.token;$('cl_auto').checked=cloud.auto;$('appsCode').value=APPS_SCRIPT;}
   if($('appVer'))$('appVer').textContent='버전: '+APP_VERSION;
@@ -1051,7 +1332,15 @@ function saveSettings(){
   s.deduction=Number($('set_ded').value)||0;s.splitRatio=Number($('set_split').value)||0;
   s.taxRate=Number($('set_tax').value)||0;s.cardRate=Number($('set_card').value)||0;
   s.sessionsPerMonth=Number($('set_spm').value)||4;
-  save();$('acaName').textContent=s.academyName;previewCalc();toast('설정을 저장했습니다');
+  if($('set_teacher')){
+    s.teacherName=$('set_teacher').value.trim();
+    s.myPhone=digitsOnly($('set_myphone').value);
+    s.aiModel=$('set_aimodel').value.trim()||'gpt-4o-mini';
+    s.aiTemplate=$('set_aitpl').value;
+  }
+  save();$('acaName').textContent=s.academyName;previewCalc();
+  if(typeof initSms==='function')initSms();
+  toast('설정을 저장했습니다');
 }
 function previewCalc(){
   const amt=Number($('prevAmt').value)||0;
@@ -1136,45 +1425,294 @@ function confirmModal(title,body,cb){$('modalTitle').textContent=title;$('modalB
 function closeModal(){$('modalBg').classList.remove('show');modalCb=null;}
 $('modalOk').onclick=()=>{if(modalCb)modalCb();closeModal();};
 $('modalBg').onclick=e=>{if(e.target===$('modalBg'))closeModal();};
+$('memoBg').onclick=e=>{if(e.target===$('memoBg'))closeMemo();};
 
 /* ================= CLOUD SYNC (Google Sheet via Apps Script) ================= */
-const APPS_SCRIPT=`const SHEET_NAME='DATA';
-const TOKEN=''; // 암호를 쓰려면 따옴표 안에 입력 (예: 'mypass1234'). 앱에도 같은 값을 넣으세요.
+const APPS_SCRIPT=`/***** 학생 종합 관리 — Apps Script 백엔드 (문자 발송 + AI 포함) *****
+ * 설치:
+ *  1) 구글시트 > 확장 프로그램 > Apps Script 에 이 코드를 통째로 붙여넣기
+ *  2) 프로젝트 설정(왼쪽 톱니) > 스크립트 속성 > 속성 추가
+ *       OPENAI_API_KEY = sk-...            (ChatGPT 키)
+ *       BRIDGE_TOKEN   = 아무 긴 문자열     (맥 브리지 전용 암호)
+ *  3) 배포 > 새 배포 > 유형 '웹 앱'
+ *       실행 사용자: 나
+ *       액세스 권한: 모든 사용자
+ *     → 나오는 /exec 주소를 웹앱 설정과 맥 브리지에 넣기
+ *  ※ 코드를 고칠 때마다 '배포 관리 > 편집(연필) > 버전: 새 버전 > 배포' 를 해야 반영됩니다.
+ ****************************************************************/
 
-function doGet(e){
-  var cb = (e && e.parameter) ? e.parameter.callback : '';
-  if (TOKEN && (!e || !e.parameter || e.parameter.token !== TOKEN)) return reply(cb, {error:'unauthorized'});
-  var sh = getSheet();
-  var n = sh.getLastRow();
-  var vals = n ? sh.getRange(1,1,n,1).getValues().map(function(r){return r[0];}) : [];
-  return reply(cb, {data: vals.join('')});
+var SHEET_NAME = 'DATA';    // 기존 전체 데이터(JSON) 시트
+var QUEUE_SHEET = 'QUEUE';  // 문자 발송 대기열 / 이력
+var TOKEN = '';             // 웹앱 설정의 '암호'와 동일하게 (안 쓰면 빈칸)
+
+var QCOLS = ['id','createdAt','name','phone','message','status','sentAt','error','batchId'];
+
+/* ================= 라우팅 ================= */
+
+function doGet(e) {
+  var p = (e && e.parameter) ? e.parameter : {};
+  var cb = p.callback || '';
+  var action = p.action || '';
+  try {
+    // 맥 브리지 전용 (JSONP 아님, 순수 JSON)
+    if (action === 'claim') {
+      requireBridge(p.token);
+      return raw(claimPending(Number(p.limit) || 10));
+    }
+    if (action === 'ping') {
+      return raw({ ok: true, time: new Date().toISOString() });
+    }
+    // 작업 결과 폴링 (CORS 막혔을 때의 우회로)
+    if (action === 'jobresult') {
+      var v = CacheService.getScriptCache().get('job_' + p.jobId);
+      return reply(cb, v ? JSON.parse(v) : { done: false });
+    }
+    if (TOKEN && p.token !== TOKEN) return reply(cb, { error: 'unauthorized' });
+
+    if (action === 'queuestat') {
+      return reply(cb, { ok: true, rows: queueTail(Number(p.n) || 60) });
+    }
+    // 기본: 전체 데이터 불러오기 (기존 동작)
+    var sh = getSheet(SHEET_NAME);
+    var n = sh.getLastRow();
+    var vals = n ? sh.getRange(1, 1, n, 1).getValues().map(function (r) { return r[0]; }) : [];
+    return reply(cb, { data: vals.join('') });
+  } catch (err) {
+    return reply(cb, { error: String(err) });
+  }
 }
 
-function doPost(e){
+function doPost(e) {
   var body = {};
   try { body = JSON.parse(e.postData.contents); } catch (err) {}
-  if (TOKEN && body.token !== TOKEN) return reply('', {error:'unauthorized'});
-  var json = body.data || '';
-  var sh = getSheet();
-  sh.clearContents();
-  var chunks = [];
-  for (var i=0; i<json.length; i+=40000) chunks.push([json.substring(i, i+40000)]);
-  if (chunks.length) sh.getRange(1,1,chunks.length,1).setValues(chunks);
-  return reply('', {ok:true, saved: json.length});
+  var action = body.action || 'push';
+  var out;
+  try {
+    if (action === 'bridgeDone') {
+      requireBridge(body.token);
+      out = markDone(body.results || []);
+    } else if (TOKEN && body.token !== TOKEN) {
+      out = { error: 'unauthorized' };
+    } else if (action === 'push') {
+      out = pushBlob(body.data || '');
+    } else if (action === 'enqueue') {
+      out = enqueue(body.items || [], body.batchId || '');
+    } else if (action === 'ai') {
+      out = aiCall(body);
+    } else if (action === 'cancelPending') {
+      out = cancelPending(body.batchId || '');
+    } else {
+      out = { error: 'unknown action: ' + action };
+    }
+  } catch (err) {
+    out = { error: String(err) };
+  }
+  if (body.jobId) {
+    CacheService.getScriptCache().put(
+      'job_' + body.jobId,
+      JSON.stringify({ done: true, result: out, error: (out && out.error) || '' }),
+      600
+    );
+  }
+  return raw(out);
 }
 
-function getSheet(){
+/* ================= 전체 데이터(JSON) ================= */
+
+function pushBlob(json) {
+  var sh = getSheet(SHEET_NAME);
+  sh.clearContents();
+  var chunks = [];
+  for (var i = 0; i < json.length; i += 40000) chunks.push([json.substring(i, i + 40000)]);
+  if (chunks.length) sh.getRange(1, 1, chunks.length, 1).setValues(chunks);
+  return { ok: true, saved: json.length };
+}
+
+/* ================= 문자 대기열 ================= */
+
+function queueSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) sh = ss.insertSheet(SHEET_NAME);
+  var sh = ss.getSheetByName(QUEUE_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(QUEUE_SHEET);
+    sh.getRange(1, 1, 1, QCOLS.length).setValues([QCOLS]);
+    sh.setFrozenRows(1);
+  }
+  if (sh.getLastRow() === 0) {
+    sh.getRange(1, 1, 1, QCOLS.length).setValues([QCOLS]);
+    sh.setFrozenRows(1);
+  }
   return sh;
 }
 
-function reply(cb, obj){
+function enqueue(items, batchId) {
+  if (!items.length) return { error: '보낼 항목이 없습니다' };
+  if (items.length > 500) return { error: '한 번에 500건까지만 가능합니다' };
+  if (!batchId) return { error: 'batchId 가 없습니다' };
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: '다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.' };
+  try {
+    var sh = queueSheet();
+    // 같은 batchId 가 이미 있으면 중복 등록으로 보고 무시한다.
+    // (응답을 못 읽어 앱이 재시도했을 때 학부모에게 문자가 두 번 가는 것을 막는다)
+    var last = sh.getLastRow();
+    if (last >= 2) {
+      var ids = sh.getRange(2, 9, last - 1, 1).getValues();
+      for (var k = 0; k < ids.length; k++) {
+        if (String(ids[k][0]) === String(batchId)) {
+          return { ok: true, queued: 0, duplicate: true, batchId: batchId };
+        }
+      }
+    }
+    var now = new Date();
+    var rows = items.map(function (it, i) {
+      return [
+        'q' + now.getTime().toString(36) + '_' + i,
+        now.toISOString(),
+        String(it.name || ''),
+        String(it.phone || ''),
+        String(it.message || ''),
+        'pending',
+        '',
+        '',
+        batchId
+      ];
+    });
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, QCOLS.length).setValues(rows);
+    SpreadsheetApp.flush();
+    return { ok: true, queued: rows.length, batchId: batchId };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* 맥 브리지가 가져가면서 동시에 sending 으로 잠금 */
+function claimPending(limit) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { ok: false, error: 'busy', items: [] };
+  try {
+    var sh = queueSheet();
+    var last = sh.getLastRow();
+    if (last < 2) return { ok: true, items: [] };
+    var vals = sh.getRange(2, 1, last - 1, QCOLS.length).getValues();
+    var picked = [];
+    for (var i = 0; i < vals.length && picked.length < limit; i++) {
+      if (String(vals[i][5]) === 'pending') {
+        sh.getRange(i + 2, 6).setValue('sending');
+        picked.push({
+          id: vals[i][0], name: vals[i][2], phone: String(vals[i][3]),
+          message: String(vals[i][4]), batchId: vals[i][8]
+        });
+      }
+    }
+    SpreadsheetApp.flush();
+    return { ok: true, items: picked };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function markDone(results) {
+  var sh = queueSheet();
+  var last = sh.getLastRow();
+  if (last < 2) return { ok: true, updated: 0 };
+  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+  var map = {};
+  for (var i = 0; i < ids.length; i++) map[String(ids[i][0])] = i + 2;
+  var n = 0;
+  results.forEach(function (r) {
+    var row = map[String(r.id)];
+    if (!row) return;
+    sh.getRange(row, 6).setValue(r.status || 'sent');
+    sh.getRange(row, 7).setValue(new Date().toISOString());
+    sh.getRange(row, 8).setValue(r.error || '');
+    n++;
+  });
+  return { ok: true, updated: n };
+}
+
+function cancelPending(batchId) {
+  var sh = queueSheet();
+  var last = sh.getLastRow();
+  if (last < 2) return { ok: true, cancelled: 0 };
+  var vals = sh.getRange(2, 1, last - 1, QCOLS.length).getValues();
+  var n = 0;
+  for (var i = 0; i < vals.length; i++) {
+    var isTarget = (String(vals[i][5]) === 'pending') && (!batchId || String(vals[i][8]) === batchId);
+    if (isTarget) { sh.getRange(i + 2, 6).setValue('cancelled'); n++; }
+  }
+  return { ok: true, cancelled: n };
+}
+
+function queueTail(n) {
+  var sh = queueSheet();
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var from = Math.max(2, last - n + 1);
+  var vals = sh.getRange(from, 1, last - from + 1, QCOLS.length).getValues();
+  return vals.map(function (v) {
+    return {
+      id: v[0], createdAt: v[1], name: v[2], phone: String(v[3]),
+      message: String(v[4]), status: v[5], sentAt: v[6], error: v[7], batchId: v[8]
+    };
+  }).reverse();
+}
+
+/* ================= ChatGPT 프록시 ================= */
+
+function aiCall(body) {
+  var key = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+  if (!key) return { error: 'OPENAI_API_KEY 스크립트 속성이 설정되지 않았습니다' };
+  if (!body.messages || !body.messages.length) return { error: '요청 내용이 비어 있습니다' };
+  var payload = {
+    model: body.model || 'gpt-4o-mini',
+    messages: body.messages,
+    temperature: (body.temperature == null ? 0.4 : body.temperature)
+  };
+  if (body.json) payload.response_format = { type: 'json_object' };
+  var res = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + key },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  var txt = res.getContentText();
+  if (code !== 200) return { error: 'OpenAI ' + code + ': ' + txt.slice(0, 400) };
+  var j = JSON.parse(txt);
+  var content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+  return { ok: true, text: content, usage: j.usage || null };
+}
+
+/* ================= 공통 ================= */
+
+function requireBridge(t) {
+  var bt = PropertiesService.getScriptProperties().getProperty('BRIDGE_TOKEN');
+  if (!bt) throw new Error('BRIDGE_TOKEN 스크립트 속성이 설정되지 않았습니다');
+  if (String(t) !== String(bt)) throw new Error('unauthorized');
+}
+
+function getSheet(name) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(name);
+  if (!sh) sh = ss.insertSheet(name);
+  return sh;
+}
+
+function reply(cb, obj) {
   var s = JSON.stringify(obj);
-  if (cb) return ContentService.createTextOutput(cb + '(' + s + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  if (cb) return ContentService.createTextOutput(cb + '(' + s + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
   return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON);
-}`;
+}
+
+function raw(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+`;
 let pushTimer=null;
 function setSync(state,msg){
   const map={idle:['미연결','man'],pending:['저장 대기…','man'],saving:['저장 중…','man'],ok:['동기화됨','auto'],loading:['불러오는 중…','man'],error:['오류'+(msg?(': '+msg):''),'man'],offline:['오프라인(로컬 저장됨)','man']};
@@ -1223,7 +1761,7 @@ async function cloudPull(silent){
     const localT=(data&&data.updatedAt)||0,remoteT=parsed.updatedAt||0;
     if(silent&&localT>remoteT){setSync('ok');schedulePush();return false;}
     suppressPush=true;
-    data=Object.assign(defaultData(),parsed);
+    data=migrate(Object.assign(defaultData(),parsed));
     localStorage.setItem(KEY,JSON.stringify(data));
     initAll();
     suppressPush=false;
@@ -1235,12 +1773,789 @@ async function cloudPull(silent){
 function toggleCloudHelp(){const h=$('cloudHelp');h.style.display=h.style.display==='none'?'block':'none';}
 function copyAppsScript(){copyText(APPS_SCRIPT,'Apps Script 코드를 복사했습니다');}
 
+
+/* ================= 학생 메모 · 발송 이력 =================
+   메모(data.notes)는 "아직 안 보낸 것"만 들고 있는다.
+   발송에 쓰이면 메모는 지워지고, 보낸 문자 전문과 그때 쓴 메모가
+   학생별 이력(data.history)에 남는다.
+========================================================== */
+const NOTE_CAP=3000, HIST_CAP=4000, HIST_PER_STUDENT=120;
+
+function allNotes(){ if(!Array.isArray(data.notes))data.notes=[]; return data.notes; }
+function allHistory(){ if(!Array.isArray(data.history))data.history=[]; return data.history; }
+function notesOf(sid){
+  return allNotes().filter(n=>n.studentId===sid)
+    .sort((a,b)=>(a.ts||0)-(b.ts||0)||String(a.at).localeCompare(String(b.at)));
+}
+function historyOf(sid){
+  return allHistory().filter(h=>h.studentId===sid)
+    .sort((a,b)=>(b.ts||0)-(a.ts||0)||String(b.at).localeCompare(String(a.at)));
+}
+function unsentCount(sid){return allNotes().filter(n=>n.studentId===sid).length;}
+function nowStamp(){
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function shortDate(s){
+  const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?`${Number(m[2])}/${Number(m[3])}`:'';
+}
+function addNoteFor(sid,text){
+  text=String(text||'').trim(); if(!text)return false;
+  allNotes().push({id:uid(),studentId:sid,at:nowStamp(),ts:Date.now(),text});
+  if(allNotes().length>NOTE_CAP)data.notes=allNotes().slice(-NOTE_CAP);
+  save(); return true;
+}
+function deleteNote(id,after){
+  data.notes=allNotes().filter(n=>n.id!==id); save(); afterNoteChange(after);
+}
+function editNote(id,after){
+  const n=allNotes().find(x=>x.id===id); if(!n)return;
+  const v=prompt('메모를 수정합니다.',n.text);
+  if(v===null)return;
+  if(!v.trim()){deleteNote(id,after);return;}
+  n.text=v.trim(); save(); afterNoteChange(after);
+}
+function afterNoteChange(after){
+  if(after==='modal')renderMemoModal();
+  else if(after==='page')renderNotesPage();
+  if(typeof renderStudents==='function')renderStudents();
+  if(typeof smsMode!=='undefined'&&smsMode==='each')renderSmsEach();
+  renderSmsPreview();
+}
+
+/* 발송 성공 후: 이력 남기고 쓰인 메모는 삭제 */
+function recordSent(items,batchId,mode){
+  const at=nowStamp(), ts=Date.now();
+  const used=new Set();
+  items.forEach(x=>{
+    allHistory().push({
+      id:uid(), studentId:x.studentId, at, ts, batchId, mode,
+      phone:x.phone, message:x.message,
+      sources:(x.noteIds||[]).map(id=>{
+        const n=allNotes().find(y=>y.id===id);
+        return n?(shortDate(n.at)+' '+n.text):'';
+      }).filter(Boolean)
+    });
+    (x.noteIds||[]).forEach(id=>used.add(id));
+  });
+  if(used.size)data.notes=allNotes().filter(n=>!used.has(n.id));
+  trimHistory();
+  // 이 학생들의 AI 정리 결과는 비운다 (다음엔 새 메모부터)
+  const sd=smsData();
+  items.forEach(x=>{ delete sd.built[x.studentId]; });
+  save();
+}
+function trimHistory(){
+  const byS={};
+  allHistory().forEach(h=>{(byS[h.studentId]=byS[h.studentId]||[]).push(h);});
+  const keep=new Set();
+  Object.keys(byS).forEach(sid=>{
+    byS[sid].sort((a,b)=>(b.ts||0)-(a.ts||0)||String(b.at).localeCompare(String(a.at)))
+      .slice(0,HIST_PER_STUDENT).forEach(h=>keep.add(h.id));
+  });
+  let arr=allHistory().filter(h=>keep.has(h.id));
+  if(arr.length>HIST_CAP){
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0)||String(b.at).localeCompare(String(a.at)));
+    arr=arr.slice(0,HIST_CAP);
+  }
+  data.history=arr;
+}
+function deleteHistory(id){
+  confirmModal('이력 삭제','이 발송 기록을 지웁니다. 실제로 보낸 문자는 되돌아가지 않습니다.',()=>{
+    data.history=allHistory().filter(h=>h.id!==id); save(); renderMemoModal(); toast('삭제했습니다');});
+}
+
+function noteLine(n,after){
+  return `<div class="noteitem">
+    <span class="nd">${shortDate(n.at)}</span>
+    <span class="nt">${esc(n.text)}</span>
+    <span class="nx"><button class="qbtn" onclick="editNote('${n.id}','${after}')">수정</button>
+      <button class="qbtn" onclick="deleteNote('${n.id}','${after}')">삭제</button></span>
+  </div>`;
+}
+function histBlock(h){
+  return `<div class="histitem">
+    <div class="hh"><b>${esc(h.at)}</b>
+      <span class="chip">${h.mode==='bulk'?'단체':'개별'}</span>
+      <button class="qbtn" style="margin-left:auto" onclick="deleteHistory('${h.id}')">삭제</button></div>
+    <div class="built">${esc(h.message)}</div>
+    ${(h.sources&&h.sources.length)?`<div class="hs">쓰인 메모 — ${h.sources.map(s=>esc(s)).join(' / ')}</div>`:''}
+  </div>`;
+}
+
+/* ---------- 메모 창 (학생 목록 · 메모 탭 공용) ---------- */
+let memoSid=null, memoTab='memo';
+function openMemo(sid,tab){
+  memoSid=sid; memoTab=tab||'memo';
+  $('memoBg').classList.add('show');
+  renderMemoModal();
+  if(memoTab==='memo')setTimeout(()=>{const i=$('memoInput'); if(i)i.focus();},60);
+}
+function closeMemo(){
+  $('memoBg').classList.remove('show'); memoSid=null;
+  if(typeof renderStudents==='function')renderStudents();
+  renderNotesPage(); if(typeof smsMode!=='undefined'&&smsMode==='each')renderSmsEach(); renderSmsPreview();
+}
+function setMemoTab(t){memoTab=t;renderMemoModal();}
+function renderMemoModal(){
+  const s=studentById(memoSid); if(!s)return;
+  const un=notesOf(memoSid), hist=historyOf(memoSid);
+  $('memoTitle').textContent=`${s.name} — 메모 · 발송 이력`;
+  let h=`<div class="subjbox" style="margin-bottom:12px">
+      <button class="subjtoggle ${memoTab==='memo'?'on':''}" onclick="setMemoTab('memo')">메모 ${un.length}</button>
+      <button class="subjtoggle ${memoTab==='hist'?'on':''}" onclick="setMemoTab('hist')">보낸 이력 ${hist.length}</button>
+    </div>`;
+  if(memoTab==='memo'){
+    h+=`<div class="row" style="margin-bottom:10px">
+        <input id="memoInput" placeholder="한 줄 적고 Enter" style="flex:1 1 auto;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px"
+               onkeydown="if(event.key==='Enter')addMemoFromModal()">
+        <button class="btn primary" onclick="addMemoFromModal()">추가</button></div>`;
+    h+=un.length?`<div class="notelist">${un.map(n=>noteLine(n,'modal')).join('')}</div>`
+      :'<div class="empty" style="padding:16px">쌓아둔 메모가 없습니다. 위에 한 줄씩 적어두면 나중에 문자로 통합됩니다.</div>';
+  }else{
+    h+=hist.length?`<div class="histlist">${hist.map(histBlock).join('')}</div>`
+      :'<div class="empty" style="padding:16px">아직 보낸 문자가 없습니다.</div>';
+  }
+  $('memoBody').innerHTML=h;
+}
+function addMemoFromModal(){
+  const i=$('memoInput');
+  if(addNoteFor(memoSid,i.value)){i.value='';renderMemoModal();setTimeout(()=>{const j=$('memoInput');if(j)j.focus();},30);}
+}
+
+/* ---------- 메모 탭 ---------- */
+function notesCandidates(){
+  const q=(($('note_q')&&$('note_q').value)||'').toLowerCase();
+  const hall=$('note_hall')?$('note_hall').value:'';
+  const grade=$('note_grade')?$('note_grade').value:'';
+  const only=$('note_only')?$('note_only').checked:false;
+  return data.students.filter(s=>s.active
+      &&(!hall||(s.hall||'')===hall)&&(!grade||s.grade===grade)
+      &&(!only||unsentCount(s.id)>0)
+      &&(!q||s.name.toLowerCase().includes(q)||(s.school||'').toLowerCase().includes(q)))
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+}
+function renderNotesPage(){
+  const wrap=$('notesList'); if(!wrap)return;
+  const hs=$('note_hall');
+  if(hs&&!hs.dataset.filled){
+    hs.innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');
+    hs.dataset.filled='1';
+  }
+  const list=notesCandidates();
+  const c=$('notesCount'); if(c)c.textContent=allNotes().length+'건 대기';
+  if(!list.length){wrap.innerHTML='<div class="empty">해당하는 재원생이 없습니다.</div>';return;}
+  wrap.innerHTML='<div class="smsgrid">'+list.map(s=>{
+    const un=notesOf(s.id), hn=historyOf(s.id).length;
+    return `<div class="smsrow">
+      <div class="who">
+        <b>${esc(s.name)}</b>${un.length?` <span class="badgeN">${un.length}</span>`:''}
+        <div class="ph">${esc(s.grade||'')}${s.hall?' · '+esc(s.hall):''}</div>
+      </div>
+      <div class="body">
+        <div class="row" style="margin:0">
+          <input id="q_${s.id}" placeholder="한 줄 적고 Enter" style="flex:1 1 auto;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px"
+                 onkeydown="if(event.key==='Enter')quickAdd('${s.id}')">
+          <button class="btn sm primary" onclick="quickAdd('${s.id}')">추가</button>
+        </div>
+        ${un.length?`<div class="notelist">${un.map(n=>noteLine(n,'page')).join('')}</div>`:''}
+      </div>
+      <div class="smsact"><button class="btn sm" onclick="openMemo('${s.id}','hist')">이력 ${hn}</button></div>
+    </div>`;}).join('')+'</div>';
+}
+function quickAdd(sid){
+  const i=$('q_'+sid); if(!i)return;
+  if(addNoteFor(sid,i.value)){
+    renderNotesPage();
+    const again=$('q_'+sid); if(again)again.focus();
+    if(typeof renderStudents==='function')renderStudents();
+    if(typeof smsMode!=='undefined'&&smsMode==='each')renderSmsEach();
+    renderSmsPreview();
+  }
+}
+function notesSelectWithMemo(){
+  const withMemo=data.students.filter(s=>s.active&&digitsOnly(s.parentPhone)&&unsentCount(s.id)>0);
+  const noPhone=data.students.filter(s=>s.active&&!digitsOnly(s.parentPhone)&&unsentCount(s.id)>0);
+  if(!withMemo.length){toast('보낼 메모가 쌓인 학생이 없습니다');return;}
+  smsSel=new Set(withMemo.map(s=>s.id));
+  document.querySelector('a[data-page="sms"]').click();
+  setSmsMode('each');
+  renderSmsTargets();renderSmsEach();renderSmsPreview();
+  toast(`${withMemo.length}명을 선택했습니다`+(noPhone.length?` (번호 없는 ${noPhone.length}명 제외)`:''));
+}
+
+/* ================= 문자 발송 · AI ================= */
+const SMS_VARS=['학생명','학년','학교','관','과목','요일','학원명','선생님','학부모호칭'];
+const DEFAULT_AI_TPL=`[{학원명}] {학생명} 학생 {학부모호칭}
+
+안녕하세요, {선생님}입니다.
+(1) 최근 학습 상황 — 사실 위주로 2~3문장
+(2) 잘하고 있는 점 또는 보완이 필요한 점 — 1~2문장
+(3) 가정에서 도와주실 부분이나 안내 — 1문장 (메모에 없으면 생략)
+
+감사합니다.`;
+
+let smsSel=new Set();
+let smsMode='bulk';
+let smsBusy=false;
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function digitsOnly(p){return String(p||'').replace(/[^0-9+]/g,'');}
+function fmtPhone(p){
+  const d=digitsOnly(p);
+  const m=d.match(/^(01[016789])(\d{3,4})(\d{4})$/);
+  return m?`${m[1]}-${m[2]}-${m[3]}`:(d||'');
+}
+function smsData(){
+  if(!data.sms)data.sms={bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{}};
+  data.sms.memo=data.sms.memo||{};data.sms.built=data.sms.built||{};
+  return data.sms;
+}
+/* 한글 2바이트 기준 — SMS 90바이트, 그 이상은 LMS(요금 다름) */
+function smsBytes(t){let n=0;for(const ch of String(t||''))n+=(ch.charCodeAt(0)>127?2:1);return n;}
+function lenLabel(t){
+  const b=smsBytes(t);
+  const kind=b<=90?'단문 SMS':(b<=2000?'장문 LMS':'2000바이트 초과');
+  return {b,kind,over:b>90};
+}
+function fillVars(tpl,s){
+  const st=data.settings;
+  const map={
+    '학생명':s.name||'','학년':s.grade||'','학교':s.school||'','관':s.hall||'',
+    '과목':(s.subjects||[]).join('·'),
+    '요일':(s.weekday!==''&&s.weekday!=null)?WD[s.weekday]+'요일':'',
+    '학원명':st.academyName||'','선생님':st.teacherName||'',
+    '학부모호칭':s.parentLabel||'학부모님'
+  };
+  return String(tpl||'').replace(/\{\s*([^}]+?)\s*\}/g,(m,k)=>map.hasOwnProperty(k)?map[k]:m);
+}
+
+/* ---------- 서버 통신 (Apps Script) ---------- */
+function gasJsonp(params){
+  return new Promise((resolve,reject)=>{
+    if(!cloud.url)return reject(new Error('설정에서 클라우드(구글시트) 연결을 먼저 해주세요'));
+    const cb='__g_'+Date.now().toString(36)+Math.floor(Math.random()*1000);
+    const s=document.createElement('script');let done=false;
+    const to=setTimeout(()=>{if(!done){done=true;cleanup();reject(new Error('시간 초과'));}},25000);
+    function cleanup(){try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(to);}
+    window[cb]=r=>{if(done)return;done=true;cleanup();resolve(r||{});};
+    const q=Object.assign({callback:cb,token:cloud.token},params);
+    const qs=Object.keys(q).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(q[k]==null?'':q[k])).join('&');
+    s.src=cloud.url+(cloud.url.indexOf('?')>=0?'&':'?')+qs;
+    s.onerror=()=>{if(!done){done=true;cleanup();reject(new Error('연결 실패'));}};
+    document.body.appendChild(s);
+  });
+}
+/* 우선 일반 POST(응답 읽기) → 막히면 작업 등록 후 결과 폴링 */
+async function gasCall(payload){
+  if(!cloud.url)throw new Error('설정에서 클라우드(구글시트) 연결을 먼저 해주세요');
+  const body=JSON.stringify(Object.assign({token:cloud.token},payload));
+  try{
+    const r=await fetch(cloud.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=JSON.parse(await r.text());
+    if(j&&j.error)throw new Error(j.error);
+    return j;
+  }catch(e){
+    if(/HTTP|unauthorized|OPENAI|OpenAI|보낼 항목|500건/.test(e.message))throw e;
+    return await gasJobFallback(payload);
+  }
+}
+async function gasJobFallback(payload){
+  const jobId='j'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  await fetch(cloud.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(Object.assign({token:cloud.token,jobId},payload))});
+  for(let i=0;i<45;i++){
+    await sleep(1300);
+    let res;try{res=await gasJsonp({action:'jobresult',jobId});}catch(e){continue;}
+    if(res&&res.done){
+      if(res.error)throw new Error(res.error);
+      if(res.result&&res.result.error)throw new Error(res.result.error);
+      return res.result;
+    }
+  }
+  throw new Error('응답 시간 초과 — Apps Script 배포를 새 버전으로 다시 배포했는지 확인하세요');
+}
+async function aiChat(messages,opt){
+  opt=opt||{};
+  const r=await gasCall({action:'ai',messages,model:data.settings.aiModel||'gpt-4o-mini',
+    temperature:opt.temperature==null?0.4:opt.temperature,json:!!opt.json});
+  if(!r||!r.text)throw new Error('AI 응답이 비어 있습니다');
+  return r.text.trim();
+}
+
+/* ---------- 받는 사람 ---------- */
+function smsCandidates(){
+  const hall=$('sms_hall')?$('sms_hall').value:'';
+  const grade=$('sms_grade')?$('sms_grade').value:'';
+  return data.students.filter(s=>s.active&&(!hall||(s.hall||'')===hall)&&(!grade||s.grade===grade))
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+}
+function renderSmsTargets(){
+  const list=smsCandidates();
+  const wrap=$('smsTargets');
+  if(!list.length){wrap.innerHTML='<div class="empty">해당 조건의 재원생이 없습니다.</div>';$('smsNoPhone').innerHTML='';updateSelCount();return;}
+  wrap.innerHTML='<div class="pickrow">'+list.map(s=>{
+    const ok=!!digitsOnly(s.parentPhone);
+    if(!ok)return `<span class="pick nophone" title="학부모 번호가 없습니다">${esc(s.name)} <span class="g">번호없음</span></span>`;
+    return `<span class="pick ${smsSel.has(s.id)?'on':''}" onclick="toggleSmsPick('${s.id}')">${esc(s.name)} <span class="g">${esc(s.grade||'')}</span></span>`;
+  }).join('')+'</div>';
+  const missing=list.filter(s=>!digitsOnly(s.parentPhone));
+  $('smsNoPhone').innerHTML=missing.length
+    ?`<div class="warnbar">학부모 번호가 없어 제외된 학생 ${missing.length}명: ${missing.map(s=>esc(s.name)).join(', ')} — [학생 관리]에서 번호를 넣어주세요.</div>`:'';
+  updateSelCount();
+}
+function toggleSmsPick(id){
+  if(smsSel.has(id))smsSel.delete(id);else smsSel.add(id);
+  renderSmsTargets();if(smsMode==='each')renderSmsEach();renderSmsPreview();
+}
+function smsSelectAll(on){
+  smsCandidates().forEach(s=>{
+    if(!digitsOnly(s.parentPhone))return;
+    if(on)smsSel.add(s.id);else smsSel.delete(s.id);
+  });
+  renderSmsTargets();if(smsMode==='each')renderSmsEach();renderSmsPreview();
+}
+function updateSelCount(){const e=$('smsSelCount');if(e)e.textContent=smsSel.size+'명';}
+function selectedStudents(){
+  return [...smsSel].map(studentById).filter(s=>s&&digitsOnly(s.parentPhone))
+    .sort((a,b)=>gradeRank(a.grade)-gradeRank(b.grade)||a.name.localeCompare(b.name,'ko'));
+}
+
+/* ---------- 모드 ---------- */
+function setSmsMode(m){
+  smsMode=m;
+  $('smsModeBulk').classList.toggle('on',m==='bulk');
+  $('smsModeEach').classList.toggle('on',m==='each');
+  $('smsBulkBox').style.display=(m==='bulk')?'':'none';
+  $('smsEachBox').style.display=(m==='each')?'':'none';
+  if(m==='each')renderSmsEach();
+  renderSmsPreview();
+}
+
+/* ---------- 단체 본문 ---------- */
+function onBulkInput(){
+  smsData().bulkBody=$('smsBody').value;save();
+  checkBulkBody();renderSmsPreview();
+}
+function checkBulkBody(){
+  const t=$('smsBody').value||'';
+  const L=lenLabel(fillVars(t,selectedStudents()[0]||{name:'홍길동',grade:'고2'}));
+  $('smsBodyLen').innerHTML=`${L.b}바이트 · ${L.kind}`;
+  $('smsBodyLen').className='len'+(L.over?' over':'');
+  $('smsBodyWarn').innerHTML=(t.trim()&&t.indexOf('{학생명}')<0)
+    ?`<div class="warnbar">이 문구에는 <b>{학생명}</b>이 없어 모두에게 똑같은 문장이 갑니다.
+       <button class="btn sm" style="margin-left:6px" onclick="insertVar('학생명',true)">맨 앞에 이름 넣기</button></div>`:'';
+}
+function insertVar(v,front){
+  const ta=$('smsBody');
+  if(front){ta.value='{'+v+'} 학생 {학부모호칭}, '+ta.value;}
+  else{
+    const a=ta.selectionStart||0,b=ta.selectionEnd||0;
+    ta.value=ta.value.slice(0,a)+'{'+v+'}'+ta.value.slice(b);
+    ta.selectionStart=ta.selectionEnd=a+v.length+2;
+  }
+  ta.focus();onBulkInput();
+}
+function renderVarChips(){
+  const e=$('varChips');if(!e)return;
+  e.innerHTML='<span class="small" style="align-self:center;margin-right:4px">넣을 항목:</span>'+
+    SMS_VARS.map(v=>`<button class="qbtn" onclick="insertVar('${v}')">{${v}}</button>`).join('');
+}
+
+/* ---------- 상용구 ---------- */
+function renderTemplates(){
+  const chips=$('tplChips');
+  if(chips){
+    chips.innerHTML=(data.templates||[]).length
+      ?data.templates.map(t=>`<button class="tplchip" onclick="useTemplate('${t.id}')">${esc(t.name)}</button>`).join('')
+      :'<span class="small">저장된 상용구가 없습니다. 아래 [상용구 관리]에서 만들어 보세요.</span>';
+  }
+  const man=$('tplManage');
+  if(man){
+    man.innerHTML=(data.templates||[]).length
+      ?(data.templates.map(t=>`<div class="settrow" style="align-items:flex-start">
+          <label style="width:150px;padding-top:6px">${esc(t.name)}</label>
+          <textarea class="msg" style="flex:1 1 300px;min-height:74px" oninput="updateTemplate('${t.id}',this.value)">${esc(t.body)}</textarea>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <button class="btn sm" onclick="useTemplate('${t.id}')">불러오기</button>
+            <button class="btn sm danger" onclick="removeTemplate('${t.id}')">삭제</button>
+          </div></div>`).join(''))
+      :'<div class="empty">상용구가 없습니다.</div>';
+  }
+}
+function useTemplate(id){
+  const t=(data.templates||[]).find(x=>x.id===id);if(!t)return;
+  setSmsMode('bulk');$('smsBody').value=t.body;onBulkInput();toast('상용구를 불러왔습니다');
+  $('smsBody').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function updateTemplate(id,v){
+  const t=(data.templates||[]).find(x=>x.id===id);if(!t)return;t.body=v;save();
+}
+function removeTemplate(id){
+  confirmModal('상용구 삭제','이 상용구를 지울까요?',()=>{
+    data.templates=(data.templates||[]).filter(x=>x.id!==id);save();renderTemplates();toast('삭제했습니다');});
+}
+function saveAsTemplate(){
+  const body=($('smsBody').value||'').trim();
+  if(!body){toast('본문이 비어 있습니다');return;}
+  const name=prompt('상용구 이름을 정해주세요.','예: 휴강 안내');
+  if(name===null)return;
+  data.templates=data.templates||[];
+  data.templates.push({id:uid(),name:(name.trim()||'이름없음'),body});
+  save();renderTemplates();toast('상용구로 저장했습니다');
+}
+
+/* ---------- 개별 메모 ---------- */
+function renderSmsEach(){
+  const list=selectedStudents();
+  const wrap=$('smsEachList');
+  const sd=smsData();
+  if(!list.length){wrap.innerHTML='<div class="empty">위에서 학생을 먼저 선택하세요.</div>';return;}
+  wrap.innerHTML='<div class="smsgrid">'+list.map(s=>{
+    const notes=notesOf(s.id);const built=sd.built[s.id]||'';
+    return `<div class="smsrow">
+      <div class="who"><b>${esc(s.name)}</b>${notes.length?` <span class="badgeN">${notes.length}</span>`:''}
+        <div class="ph">${esc(s.grade||'')} · ${esc(fmtPhone(s.parentPhone))}</div></div>
+      <div class="body">
+        ${notes.length?`<div class="notelist">${notes.map(n=>noteLine(n,'sms')).join('')}</div>`
+          :'<div class="empty" style="padding:10px 4px">쌓아둔 메모가 없습니다. 아래에 적거나 [메모] 탭에서 미리 적어두세요.</div>'}
+        <div class="row" style="margin:0">
+          <input id="q_sms_${s.id}" placeholder="메모 한 줄 추가하고 Enter" style="flex:1 1 auto;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px"
+                 onkeydown="if(event.key==='Enter')smsQuickAdd('${s.id}')">
+          <button class="btn sm" onclick="smsQuickAdd('${s.id}')">추가</button>
+        </div>
+        <div class="built ${built?'':'empty'}" id="built_${s.id}">${built?esc(built):'AI 정리 결과가 여기에 표시됩니다.'}</div>
+      </div>
+      <div class="smsact">
+        <button class="btn sm blue" onclick="aiPolishOne('${s.id}')">✨ 정리</button>
+        <button class="btn sm" onclick="useNotesRaw('${s.id}')">메모 그대로</button>
+        <button class="btn sm" onclick="editBuilt('${s.id}')">직접수정</button>
+      </div>
+    </div>`;}).join('')+'</div>';
+}
+function smsQuickAdd(sid){
+  const i=$('q_sms_'+sid);if(!i)return;
+  if(addNoteFor(sid,i.value)){
+    i.value='';renderSmsEach();renderSmsPreview();
+    setTimeout(()=>{const j=$('q_sms_'+sid);if(j)j.focus();},30);
+    if(typeof renderStudents==='function')renderStudents();
+    renderNotesPage();
+  }
+}
+function useNotesRaw(sid){
+  const notes=notesOf(sid);
+  if(!notes.length){toast('쌓인 메모가 없습니다');return;}
+  smsData().built[sid]=notes.map(n=>n.text).join('\n');
+  save();renderSmsEach();renderSmsPreview();
+  toast('메모를 그대로 넣었습니다 — 보내기 전에 문구를 꼭 다듬으세요');
+}
+function saveEachFix(){
+  const sd=smsData();sd.eachHead=$('eachHead').value;sd.eachTail=$('eachTail').value;save();renderSmsPreview();
+}
+function editBuilt(id){
+  const sd=smsData();
+  const cur=sd.built[id]||'';
+  const v=prompt('보낼 본문을 직접 수정합니다.',cur);
+  if(v===null)return;
+  sd.built[id]=v;save();renderSmsEach();renderSmsPreview();
+}
+function clearEachBuilt(){
+  confirmModal('정리 결과 비우기','AI가 만든 본문을 모두 지웁니다. 메모는 남습니다.',()=>{
+    smsData().built={};save();renderSmsEach();renderSmsPreview();toast('비웠습니다');});
+}
+
+/* ---------- AI ---------- */
+function aiSystemForEach(){
+  return `당신은 한국 학원 선생님이 학부모에게 보낼 문자를 다듬는 조수입니다.
+규칙:
+- 선생님이 급하게 적은 메모를 학부모용 문자로 정리합니다.
+- 메모에 없는 사실은 절대 지어내지 않습니다. 점수·등수·출결 같은 수치는 메모에 있는 것만 씁니다.
+- 아래 정형 틀의 구성과 순서를 따르되, 괄호 안 지시문은 결과에 넣지 않습니다.
+- 존댓말로 정중하고 담백하게. 이모지, 과장, 느낌표 남발 금지.
+- 비난조 대신 사실과 다음 행동 중심으로 씁니다.
+- 여러 날짜에 걸쳐 적힌 메모를 하나의 문자로 통합합니다.
+- 날짜순으로 나열하지 말고 학습 내용 / 수업 태도 / 과제 / 안내사항처럼 주제별로 묶어 자연스러운 문단으로 씁니다.
+- 날짜는 앞으로 예정된 일정처럼 꼭 필요할 때만 언급합니다.
+- 같은 이야기가 여러 번 나오면 하나로 합칩니다.
+- 전체 200~350자.
+- 학생 이름은 주어진 이름을 그대로 씁니다.
+- 결과는 문자 본문만 출력합니다. 머리말이나 설명을 붙이지 않습니다.
+
+[정형 틀]
+${data.settings.aiTemplate||DEFAULT_AI_TPL}`;
+}
+function memoTextOf(sid){
+  return notesOf(sid).map(n=>shortDate(n.at)+' '+n.text).join('\n');
+}
+async function aiPolishOne(id){
+  const s=studentById(id);if(!s)return;
+  const sd=smsData();const memo=memoTextOf(id).trim();
+  if(!memo){toast('쌓인 메모가 없습니다');return;}
+  const box=$('built_'+id);
+  if(box){box.className='built';box.innerHTML='<span class="aiwait"></span> 정리 중…';}
+  try{
+    const txt=await aiChat([
+      {role:'system',content:aiSystemForEach()},
+      {role:'user',content:`학생 이름: ${s.name}\n학년: ${s.grade||''}\n학부모 호칭: ${s.parentLabel||'학부모님'}\n선생님: ${data.settings.teacherName||''}\n학원명: ${data.settings.academyName||''}\n\n[선생님 메모]\n${memo}`}
+    ],{temperature:0.4});
+    sd.built[id]=txt;save();renderSmsEach();renderSmsPreview();toast('정리했습니다');
+  }catch(e){
+    if(box){box.className='built empty';box.textContent='실패: '+e.message;}
+    toast('AI 실패: '+e.message);
+  }
+}
+async function aiPolishEachAll(){
+  if(smsBusy){toast('진행 중입니다');return;}
+  const sd=smsData();
+  const targets=selectedStudents().filter(s=>notesOf(s.id).length);
+  if(!targets.length){toast('쌓인 메모가 있는 학생이 없습니다');return;}
+  smsBusy=true;toast(`${targets.length}명 정리를 시작합니다…`);
+  try{
+    for(let i=0;i<targets.length;i+=15){
+      const chunk=targets.slice(i,i+15);
+      const payload=chunk.map(s=>({id:s.id,이름:s.name,학년:s.grade||'',호칭:s.parentLabel||'학부모님',메모:memoTextOf(s.id)}));
+      const txt=await aiChat([
+        {role:'system',content:aiSystemForEach()+`\n\n여러 학생을 한 번에 처리합니다. 반드시 아래 JSON 형식으로만 답하세요.\n{"결과":[{"id":"입력받은 id 그대로","문자":"완성된 문자 본문"}]}`},
+        {role:'user',content:JSON.stringify({학생들:payload},null,1)}
+      ],{json:true,temperature:0.4});
+      let parsed;try{parsed=JSON.parse(txt);}catch(e){throw new Error('AI 응답 형식 오류');}
+      (parsed['결과']||parsed.results||[]).forEach(r=>{
+        if(r&&r.id&&(r['문자']||r.text))sd.built[r.id]=String(r['문자']||r.text).trim();
+      });
+      save();renderSmsEach();renderSmsPreview();
+    }
+    toast('정리를 마쳤습니다');
+  }catch(e){toast('AI 실패: '+e.message);}
+  finally{smsBusy=false;}
+}
+async function aiPolishBulk(){
+  const cur=($('smsBody').value||'').trim();
+  if(!cur){toast('본문을 먼저 적어주세요');return;}
+  toast('다듬는 중…');
+  try{
+    const txt=await aiChat([
+      {role:'system',content:aiBulkSystem()},
+      {role:'user',content:`아래 문구를 학부모 단체 안내 문자로 다듬어 주세요.\n\n${cur}`}
+    ],{temperature:0.4});
+    $('smsBody').value=txt;onBulkInput();toast('다듬었습니다');
+  }catch(e){toast('AI 실패: '+e.message);}
+}
+async function aiDraftBulk(){
+  const p=prompt('무엇을 안내할까요? 한 줄로 적어주세요.','예: 이번 주 금요일 휴강, 다음 주 월요일 보강');
+  if(p===null||!p.trim())return;
+  toast('초안을 만드는 중…');
+  try{
+    const txt=await aiChat([
+      {role:'system',content:aiBulkSystem()},
+      {role:'user',content:p.trim()}
+    ],{temperature:0.5});
+    setSmsMode('bulk');$('smsBody').value=txt;onBulkInput();toast('초안을 만들었습니다');
+  }catch(e){toast('AI 실패: '+e.message);}
+}
+function aiBulkSystem(){
+  return `당신은 한국 학원의 학부모 안내 문자를 쓰는 조수입니다.
+규칙:
+- 학부모에게 보내는 안내 문자입니다. 존댓말, 정중하고 담백하게. 이모지 금지.
+- 중괄호 자리표시자를 써서 학생마다 개별화합니다. 쓸 수 있는 것: ${SMS_VARS.map(v=>'{'+v+'}').join(' ')}
+- 반드시 {학생명} 을 한 번 이상 포함합니다.
+- 학원명은 {학원명}, 선생님 이름은 {선생님} 으로 씁니다.
+- 사용자가 알려주지 않은 날짜·시간·금액은 지어내지 말고, 필요하면 (날짜)처럼 빈칸으로 남깁니다.
+- 120~250자.
+- 결과는 문자 본문만 출력합니다. 설명이나 머리말 금지.`;
+}
+async function aiDraftTemplate(){
+  const p=($('tplAiPrompt').value||'').trim();
+  if(!p){toast('무엇을 안내할지 적어주세요');return;}
+  toast('상용구를 만드는 중…');
+  try{
+    const txt=await aiChat([
+      {role:'system',content:aiBulkSystem()},
+      {role:'user',content:p}
+    ],{temperature:0.5});
+    data.templates=data.templates||[];
+    data.templates.push({id:uid(),name:p.slice(0,18),body:txt});
+    save();renderTemplates();$('tplAiPrompt').value='';toast('상용구를 추가했습니다');
+  }catch(e){toast('AI 실패: '+e.message);}
+}
+function resetAiTemplate(){
+  data.settings.aiTemplate=DEFAULT_AI_TPL;save();
+  if($('set_aitpl'))$('set_aitpl').value=DEFAULT_AI_TPL;
+  toast('기본 정형 틀로 되돌렸습니다');
+}
+
+/* ---------- 미리보기 ---------- */
+function smsBuildList(){
+  const sd=smsData();const out=[];
+  selectedStudents().forEach(s=>{
+    const phone=digitsOnly(s.parentPhone);if(!phone)return;
+    let text='';
+    if(smsMode==='bulk'){text=fillVars(sd.bulkBody||'',s);}
+    else{
+      const body=(sd.built[s.id]||'').trim();if(!body)return;
+      const head=fillVars(sd.eachHead||'',s).trim();
+      const tail=fillVars(sd.eachTail||'',s).trim();
+      text=[head,body,tail].filter(Boolean).join('\n\n');
+    }
+    text=text.trim();if(!text)return;
+    out.push({studentId:s.id,name:s.name,phone,message:text,
+      noteIds:(smsMode==='each')?notesOf(s.id).map(n=>n.id):[]});
+  });
+  return out;
+}
+function renderSmsPreview(){
+  const wrap=$('smsPreview');if(!wrap)return;
+  const list=smsBuildList();
+  if(!list.length){
+    const pend=(smsMode==='each')?selectedStudents().filter(s=>notesOf(s.id).length):[];
+    wrap.innerHTML=pend.length
+      ?`<div class="warnbar">메모는 쌓여 있지만 아직 문자로 정리되지 않았습니다 (${pend.length}명). 위에서 [✨ 정리]를 누르거나 [메모 그대로]를 쓰세요.</div>`
+      :'<div class="empty">보낼 내용이 없습니다. 받는 사람과 본문을 확인하세요.</div>';
+    return;
+  }
+  const totalB=list.reduce((a,x)=>a+smsBytes(x.message),0);
+  const over=list.filter(x=>smsBytes(x.message)>90).length;
+  let h=`<div class="okbar">받는 사람 <b>${list.length}명</b> · 모두 <b>개별 문자</b>로 발송됩니다${over?` · 장문(LMS) ${over}건`:''}</div>`;
+  h+='<div class="smsgrid">'+list.map(x=>{
+    const L=lenLabel(x.message);
+    return `<div class="smsrow">
+      <div class="who"><b>${esc(x.name)}</b><div class="ph">${esc(fmtPhone(x.phone))}</div></div>
+      <div class="body"><div class="built">${esc(x.message)}</div></div>
+      <div class="smsact"><span class="len ${L.over?'over':''}">${L.b}B<br>${L.kind.replace('단문 ','').replace('장문 ','')}</span></div>
+    </div>`;}).join('')+'</div>';
+  wrap.innerHTML=h;
+}
+
+/* ---------- 발송 ---------- */
+async function smsSend(){
+  if(smsBusy){toast('진행 중입니다');return;}
+  const list=smsBuildList();
+  if(!list.length){toast('보낼 내용이 없습니다');return;}
+  if(!cloud.url){toast('설정에서 클라우드 연결을 먼저 해주세요');return;}
+  const sample=list[0];
+  confirmModal('문자 발송',
+    `<div style="font-size:13.5px;line-height:1.6">
+      <b>${list.length}명</b>에게 개별 문자를 보냅니다. 보낸 문자는 취소할 수 없습니다.<br>
+      <span class="small">첫 번째 수신자 예시 — ${esc(sample.name)} (${esc(fmtPhone(sample.phone))})</span>
+      <div class="built" style="margin-top:8px;max-height:180px;overflow:auto">${esc(sample.message)}</div>
+    </div>`,
+    async()=>{
+      smsBusy=true;toast('대기열에 올리는 중…');
+      try{
+        const batchId='b'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+        const r=await gasCall({action:'enqueue',batchId,items:list.map(x=>({name:x.name,phone:x.phone,message:x.message}))});
+        recordSent(list,batchId,smsMode);
+        renderSmsEach();renderSmsPreview();renderNotesPage();
+        if(typeof renderStudents==='function')renderStudents();
+        toast(r.duplicate?'이미 등록된 발송입니다 (중복 방지)':`${r.queued}건을 대기열에 올렸습니다 — 맥에서 곧 발송됩니다`);
+        setTimeout(smsRefreshQueue,3000);
+        setTimeout(smsRefreshQueue,12000);
+      }catch(e){
+        toast('실패: '+e.message);
+        alert('대기열 등록에 실패했습니다.\n\n'+e.message+'\n\n[수동 발송용 목록 복사]를 눌러 맥에서 직접 보낼 수 있습니다.');
+      }finally{smsBusy=false;}
+    });
+}
+async function smsSendTest(){
+  const my=digitsOnly(data.settings.myPhone);
+  if(!my){toast('설정에서 [내 번호]를 먼저 입력하세요');return;}
+  const list=smsBuildList();
+  const msg=list.length?list[0].message:'학생 종합 관리 테스트 문자입니다.';
+  try{
+    const r=await gasCall({action:'enqueue',batchId:'t'+Date.now().toString(36),items:[{name:'테스트',phone:my,message:msg}]});
+    toast('테스트 1건을 대기열에 올렸습니다');
+    setTimeout(smsRefreshQueue,3000);
+  }catch(e){toast('실패: '+e.message);}
+}
+function smsCopyManual(){
+  const list=smsBuildList();
+  if(!list.length){toast('보낼 내용이 없습니다');return;}
+  const tsv=list.map(x=>x.phone+'\t'+x.message.replace(/\r?\n/g,'\\n')).join('\n');
+  copyText(tsv,`${list.length}건을 복사했습니다 — 맥에서 manual_send 스크립트를 실행하세요`);
+}
+async function smsRefreshQueue(){
+  const wrap=$('smsQueue');if(!wrap)return;
+  wrap.innerHTML='<div class="empty"><span class="aiwait"></span> 불러오는 중…</div>';
+  try{
+    const r=await gasJsonp({action:'queuestat',n:60});
+    const rows=(r&&r.rows)||[];
+    if(!rows.length){wrap.innerHTML='<div class="empty">발송 기록이 없습니다.</div>';return;}
+    const badge=s=>({pending:['대기','man'],sending:['발송 중','man'],sent:['발송됨','auto'],
+      error:['실패','man'],cancelled:['취소','man']})[s]||[s,'man'];
+    let h='<table><thead><tr><th>시각</th><th>이름</th><th>번호</th><th>내용</th><th>상태</th></tr></thead><tbody>';
+    rows.forEach(x=>{
+      const b=badge(x.status);
+      const t=String(x.sentAt||x.createdAt||'').replace('T',' ').slice(5,16);
+      h+=`<tr><td class="small">${esc(t)}</td><td>${esc(x.name||'-')}</td>
+        <td class="small">${esc(fmtPhone(x.phone))}</td>
+        <td class="small" style="max-width:340px">${esc(String(x.message||'').replace(/\s+/g,' ').slice(0,60))}${String(x.message||'').length>60?'…':''}</td>
+        <td><span class="tag ${b[1]}">${b[0]}</span>${x.error?`<div class="small" style="color:var(--danger)">${esc(String(x.error).slice(0,60))}</div>`:''}</td></tr>`;
+    });
+    wrap.innerHTML=h+'</tbody></table>';
+  }catch(e){wrap.innerHTML=`<div class="errbar">불러오지 못했습니다: ${esc(e.message)}</div>`;}
+}
+function smsCancelPending(){
+  confirmModal('대기 취소','아직 보내지 않은 대기 건을 모두 취소합니다. 이미 발송된 문자는 되돌릴 수 없습니다.',async()=>{
+    try{const r=await gasCall({action:'cancelPending',batchId:''});toast(`${r.cancelled}건을 취소했습니다`);smsRefreshQueue();}
+    catch(e){toast('실패: '+e.message);}
+  });
+}
+
+/* ---------- 학부모 번호 일괄 입력 ---------- */
+function importPhones(){
+  const raw=$('phoneBulk').value||'';
+  const over=$('phoneOverwrite').checked;
+  const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!lines.length){toast('붙여넣은 내용이 없습니다');return;}
+  let ok=0,skip=0;const miss=[],dup=[];
+  lines.forEach(line=>{
+    const parts=line.split(/[\t,;]|\s{2,}/).map(x=>x.trim()).filter(Boolean);
+    let name='',phone='';
+    if(parts.length>=2){name=parts[0];phone=parts[parts.length-1];}
+    else{
+      const m=line.match(/^(.*?)[\s:]+([0-9\-+()\s]{9,})$/);
+      if(m){name=m[1].trim();phone=m[2];}
+    }
+    const d=digitsOnly(phone);
+    if(!name||!d){miss.push(line);return;}
+    const hits=data.students.filter(s=>s.name===name);
+    if(!hits.length){miss.push(name);return;}
+    if(hits.length>1){dup.push(name);return;}
+    if(hits[0].parentPhone&&!over){skip++;return;}
+    hits[0].parentPhone=d;ok++;
+  });
+  save();renderStudents();renderSmsTargets();
+  let h=`<div class="${ok?'okbar':'warnbar'}">${ok}명에게 번호를 넣었습니다.`;
+  if(skip)h+=` 이미 번호가 있어 건너뜀 ${skip}명.`;
+  h+='</div>';
+  if(dup.length)h+=`<div class="warnbar">이름이 중복돼 넣지 못함: ${esc(dup.join(', '))} — 학생 목록에서 직접 수정하세요.</div>`;
+  if(miss.length)h+=`<div class="errbar">처리하지 못한 줄 ${miss.length}개: ${esc(miss.slice(0,8).join(' / '))}${miss.length>8?' …':''}</div>`;
+  $('phoneBulkResult').innerHTML=h;
+  if(ok)$('phoneBulk').value='';
+}
+
+/* ---------- 초기화 ---------- */
+function initSms(){
+  const sd=smsData();
+  if($('smsBody'))$('smsBody').value=sd.bulkBody||'';
+  if($('eachHead'))$('eachHead').value=sd.eachHead||'';
+  if($('eachTail'))$('eachTail').value=sd.eachTail||'';
+  const hs=$('sms_hall');
+  if(hs){const cur=hs.value;hs.innerHTML='<option value="">전체 관</option>'+data.halls.map(h=>`<option>${esc(h)}</option>`).join('');hs.value=cur||'';}
+  renderVarChips();renderTemplates();renderSmsTargets();checkBulkBody();renderSmsPreview();renderNotesPage();
+  const warn=$('smsSetupWarn');
+  if(warn)warn.innerHTML=cloud.url?'':'<div class="errbar">문자 발송은 <b>클라우드(구글시트) 연결</b>이 있어야 동작합니다. [설정 · 백업]에서 먼저 연결하세요.</div>';
+}
+
 /* ================= INIT ================= */
 function initAll(){
   $('acaName').textContent=data.settings.academyName;
   renderHallSelectors();resetStudentForm();renderPresetChips();renderStudents();refreshSchoolList();
   $('m_month').value=todayMonth();
   fillScoreSelectors();renderSettings();
+  if(!data.settings.aiTemplate)data.settings.aiTemplate=DEFAULT_AI_TPL;
+  initSms();renderNotesPage();
 }
 function boot(){
   suppressPush=true;initAll();suppressPush=false;
