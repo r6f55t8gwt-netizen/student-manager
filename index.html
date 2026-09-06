@@ -258,6 +258,7 @@ select.mini,input.mini{padding:6px 8px}
             </select>
           </div>
           <div class="field"><label>학생 연락처(선택)</label><input id="s_sphone" inputmode="tel" placeholder="010-0000-0000"></div>
+          <div class="field"><label>부르는 이름(선택)</label><input id="s_nick" placeholder="비우면 성을 뺀 이름" class="mini" style="width:120px"></div>
         </div>
         <div class="hint">정산 그룹을 비우면 자동으로 <b>학년+관</b>(관 있으면) 또는 <b>학년+과목수</b>로 묶입니다. 예: 고1은 관을 지정 → "고1 1관", 고2는 관 비움 → "고2 2과목".</div>
         <div class="field">
@@ -680,12 +681,17 @@ select.mini,input.mini{padding:6px 8px}
         <datalist id="aiModelList"></datalist>
         <div class="small" style="margin:6px 0 12px">ChatGPT 키는 브라우저가 아니라 <b>Apps Script 스크립트 속성</b>(OPENAI_API_KEY)에 둡니다. 이 페이지에는 키를 입력하지 않습니다.</div>
         <div class="field">
-          <label>개별 문자 <b>본문</b> 정형 틀 <span class="small">AI는 이 구성으로 <b>본문만</b> 씁니다. 인사말·학원명·서명은 넣지 마세요 — 머리말·맺음말 칸이 처리합니다.</span></label>
-          <textarea id="set_aitpl" class="msg" style="min-height:120px" oninput="checkAiTemplate()"></textarea>
+          <label>AI 지시문 <span class="small">개별 문자 <b>본문</b>을 쓸 때 AI에게 주는 지시 전체입니다. 마음대로 고치세요 — 말투·순서·분량 전부 여기서 정해집니다.</span></label>
+          <textarea id="set_aitpl" class="msg" style="min-height:300px" oninput="checkAiTemplate()"></textarea>
         </div>
         <div id="aiTplWarn"></div>
+        <div class="note" style="border-left:3px solid var(--accent2);background:#eef3f9;padding:10px 13px;border-radius:0 8px 8px 0;margin:0 0 12px;font-size:12.5px">
+          <b>고칠 때 지켜야 할 것 두 가지</b><br>
+          ① <b>인사말·학원명·서명을 쓰지 말라</b>는 지시는 남겨두세요. 그 부분은 [개별] 탭의 머리말·맺음말이 정확히 채웁니다.<br>
+          ② <b>중괄호를 쓰지 말라</b>는 지시도 남겨두세요. 없으면 <code>{학원명}</code> 같은 글자가 문자에 그대로 갈 수 있습니다.
+        </div>
         <div class="row"><button class="btn primary" onclick="saveSettings()">저장</button>
-          <button class="btn ghost" onclick="resetAiTemplate()">본문 틀 기본값으로</button></div>
+          <button class="btn ghost" onclick="resetAiTemplate()">기본 지시문으로 되돌리기</button></div>
       </div>
 
       <div class="card">
@@ -732,11 +738,11 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 9 · 2026-09-06 (머리말·맺음말 분리 · 가독성)';
+const APP_VERSION='빌드 11 · 2026-09-06 (모델 호환 자동 대응)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
-            teacherName:'',myPhone:'',senderNumber:'',aiModel:'gpt-4o-mini',aiTemplate:''},
+            teacherName:'',myPhone:'',senderNumber:'',aiModel:'gpt-4o-mini',aiSystem:''},
   subjects:['수학','영어','국어','과학'],
   halls:['1관','2관','3관'],
   presets:[],
@@ -776,6 +782,7 @@ function migrate(d){
     if(s.parentPhone==null)s.parentPhone='';
     if(s.parentLabel==null)s.parentLabel='학부모님';
     if(s.studentPhone==null)s.studentPhone='';
+    if(s.nickname==null)s.nickname='';
   });
   return d;
 }
@@ -889,7 +896,7 @@ function saveStudent(){
     weekday:$('s_weekday').value, startDate:$('s_start').value, endDate:$('s_end').value,
     baseTuition:Number($('s_tuition').value)||0, feeGroup:$('s_feegroup').value.trim(), memo:$('s_memo').value.trim(),
     parentPhone:digitsOnly($('s_pphone').value), parentLabel:$('s_plabel').value||'학부모님',
-    studentPhone:digitsOnly($('s_sphone').value)
+    studentPhone:digitsOnly($('s_sphone').value), nickname:$('s_nick').value.trim()
   };
   if(editid){Object.assign(studentById(editid),obj);toast('수정되었습니다');}
   else{data.students.push(Object.assign({id:uid(),active:true},obj));toast('학생이 추가되었습니다');}
@@ -903,13 +910,13 @@ function editStudent(id){
   $('s_start').value=s.startDate||'';$('s_end').value=s.endDate||'';$('s_tuition').value=s.baseTuition||'';
   $('s_feegroup').value=s.feeGroup||'';$('s_memo').value=s.memo||'';selectedSubjects=[...(s.subjects||[])];
   $('s_pphone').value=fmtPhone(s.parentPhone||'');$('s_plabel').value=s.parentLabel||'학부모님';
-  $('s_sphone').value=fmtPhone(s.studentPhone||'');
+  $('s_sphone').value=fmtPhone(s.studentPhone||'');$('s_nick').value=s.nickname||'';
   renderSubjectToggles();
   $('studFormTitle').textContent='✎ 학생 수정';$('s_cancel').style.display='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function resetStudentForm(){
-  ['s_name','s_school','s_start','s_end','s_tuition','s_feegroup','s_memo','s_editid','s_pphone','s_sphone'].forEach(i=>$(i).value='');
+  ['s_name','s_school','s_start','s_end','s_tuition','s_feegroup','s_memo','s_editid','s_pphone','s_sphone','s_nick'].forEach(i=>$(i).value='');
   if($('s_plabel'))$('s_plabel').value='학부모님';
   $('s_grade').value='고1';$('s_weekday').value='';selectedSubjects=[];
   if($('s_hall'))$('s_hall').value=(data.halls[0]||'');
@@ -1340,7 +1347,7 @@ function renderSettings(){
     $('set_myphone').value=s.myPhone||'';
     $('set_sender').value=fmtPhone(s.senderNumber||'');
     $('set_aimodel').value=s.aiModel||'gpt-4o-mini';
-    $('set_aitpl').value=s.aiTemplate||'';
+    $('set_aitpl').value=s.aiSystem||'';
     fillAiModelList();
     const _h=$('aiModelHint');
     if(_h&&(data.aiModels||[]).length)_h.textContent=`저장된 목록 ${data.aiModels.length}개`;
@@ -1361,7 +1368,7 @@ function saveSettings(){
     s.myPhone=digitsOnly($('set_myphone').value);
     s.senderNumber=digitsOnly($('set_sender').value);
     s.aiModel=$('set_aimodel').value.trim()||'gpt-4o-mini';
-    s.aiTemplate=$('set_aitpl').value;
+    s.aiSystem=$('set_aitpl').value;
   }
   save();$('acaName').textContent=s.academyName;previewCalc();
   if(typeof initSms==='function')initSms();
@@ -1693,25 +1700,79 @@ function aiCall(body) {
   var key = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
   if (!key) return { error: 'OPENAI_API_KEY 스크립트 속성이 설정되지 않았습니다' };
   if (!body.messages || !body.messages.length) return { error: '요청 내용이 비어 있습니다' };
-  var payload = {
-    model: body.model || 'gpt-4o-mini',
-    messages: body.messages,
-    temperature: (body.temperature == null ? 0.4 : body.temperature)
-  };
+
+  var model = body.model || 'gpt-4o-mini';
+  var payload = { model: model, messages: body.messages };
   if (body.json) payload.response_format = { type: 'json_object' };
-  var res = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + key },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+  var temp = (body.temperature == null ? 0.4 : body.temperature);
+  if (temp !== 1) payload.temperature = temp;
+
+  // 이 모델이 예전에 거부했던 항목은 처음부터 빼고 보낸다
+  dropKnownUnsupported(model, payload);
+
+  // 모델이 지원하지 않는 항목이 있으면 그것만 빼고 다시 시도한다
+  for (var attempt = 0; attempt < 3; attempt++) {
+    var res = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + key },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    var txt = res.getContentText();
+
+    if (code === 200) {
+      var j = JSON.parse(txt);
+      var content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+      return { ok: true, text: content, usage: j.usage || null, model: model };
+    }
+
+    var bad = unsupportedParam(code, txt);
+    if (bad && payload.hasOwnProperty(bad)) {
+      delete payload[bad];
+      rememberUnsupported(model, bad);
+      continue;   // 그 항목만 빼고 재시도
+    }
+    return { error: 'OpenAI ' + code + ': ' + txt.slice(0, 400) };
+  }
+  return { error: 'OpenAI 요청이 반복 실패했습니다' };
+}
+
+/** 400 응답에서 "이 항목은 지원 안 함" 을 읽어낸다 */
+function unsupportedParam(code, txt) {
+  if (code !== 400) return null;
+  if (!/unsupported|not support|is not supported/i.test(txt)) return null;
+  var m = txt.match(/"param"\s*:\s*"([^"]+)"/);
+  return m ? m[1].split('.')[0] : null;
+}
+
+function unsupportedKey(model) { return 'NOSUP_' + model; }
+
+function rememberUnsupported(model, param) {
+  var props = PropertiesService.getScriptProperties();
+  var k = unsupportedKey(model);
+  var cur = (props.getProperty(k) || '').split(',').filter(String);
+  if (cur.indexOf(param) < 0) cur.push(param);
+  props.setProperty(k, cur.join(','));
+}
+
+function dropKnownUnsupported(model, payload) {
+  var cur = (PropertiesService.getScriptProperties().getProperty(unsupportedKey(model)) || '')
+    .split(',').filter(String);
+  cur.forEach(function (p) { delete payload[p]; });
+}
+
+/** 모델별로 기억해 둔 '지원 안 하는 항목' 을 초기화합니다 */
+function 모델호환기록_초기화() {
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties();
+  var n = 0;
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf('NOSUP_') === 0) { props.deleteProperty(k); n++; }
   });
-  var code = res.getResponseCode();
-  var txt = res.getContentText();
-  if (code !== 200) return { error: 'OpenAI ' + code + ': ' + txt.slice(0, 400) };
-  var j = JSON.parse(txt);
-  var content = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
-  return { ok: true, text: content, usage: j.usage || null };
+  Logger.log('%s개 기록을 지웠습니다.', n);
+  return n;
 }
 
 /* ================= 모델 목록 ================= */
@@ -2061,25 +2122,66 @@ function notesSelectWithMemo(){
 }
 
 /* ================= 문자 발송 · AI ================= */
-const SMS_VARS=['학생명','학년','학교','관','과목','요일','학원명','선생님','학부모호칭'];
-/* 정형 틀은 '본문'만 다룬다. 머리말·맺음말은 아래 상수로 앱이 직접 붙인다. */
-const DEFAULT_AI_TPL=`(1) 최근 학습 상황 — 사실 위주로 2~3문장
-(2) 잘하고 있는 점 또는 보완이 필요한 점 — 1~2문장
-(3) 가정에서 도와주실 부분이나 안내 — 1문장 (메모에 없으면 생략)`;
+const SMS_VARS=['학생명','이름','이름이','학년','학교','관','과목','요일','학원명','선생님','학부모호칭'];
+/* AI 지시문 전체 — 설정에서 통째로 고칠 수 있다.
+   머리말·맺음말은 아래 상수로 앱이 직접 붙인다(치환이라 항상 정확). */
+const DEFAULT_AI_SYSTEM=`당신은 한국 학원 선생님이 학부모에게 보낼 문자의 본문을 쓰는 조수입니다.
+
+[가장 먼저]
+- 메모에 강의 일정(휴강·보강·시험·특강·진도 변경 등)이 있으면 그 내용을 본문 맨 앞에 씁니다.
+  학부모가 가장 먼저 알고 싶어 하는 정보입니다.
+
+[호칭과 말투]
+- 학생은 성을 뺀 이름으로 부릅니다. "김서연 학생은"(X) → "서연이는"(O)
+- 이름은 본문에서 처음 한 번만 씁니다. 그 뒤로는 "요즘은", "수업 때는" 처럼 이름 없이 자연스럽게 이어갑니다.
+- 이름 뒤 조사는 자연스럽게 붙입니다. 받침이 있으면 "서연이는", 없으면 "민서는".
+- 학부모께 드리는 문자입니다. 예의 바르되 딱딱하지 않게, 살갑고 따뜻하게 씁니다.
+- 선생님이 아이를 늘 가까이서 지켜보고 있다는 느낌이 들도록 구체적으로 씁니다.
+  ("성실합니다"보다 "질문을 먼저 들고 오는 날이 많아졌습니다"처럼 장면이 보이게)
+
+[내용]
+- 선생님이 급하게 적은 메모를 학부모용 문장으로 정리합니다.
+- 메모에 없는 사실은 절대 지어내지 않습니다. 점수·등수·출결 수치는 메모에 있는 것만 씁니다.
+- 여러 날짜의 메모를 하나로 통합합니다. 날짜순 나열이 아니라 주제별로 묶습니다.
+- 같은 이야기가 여러 번 나오면 하나로 합칩니다.
+- 날짜는 앞으로 예정된 일정처럼 꼭 필요할 때만 언급합니다.
+- 이모지, 과장, 느낌표 남발 금지. 비난조 대신 사실과 다음 행동 중심으로 씁니다.
+
+[구성]
+(1) 강의 일정 안내 — 메모에 있으면 맨 앞에, 없으면 생략
+(2) 최근 학습 상황 — 사실 위주로 2~3문장
+(3) 잘하고 있는 점 또는 보완이 필요한 점 — 1~2문장
+(4) 가정에서 도와주실 부분이나 안내 — 1문장 (메모에 없으면 생략)
+
+[형식 — 이 부분은 앱이 동작하는 데 필요합니다]
+- 각 항목을 하나의 문단으로 쓰고, 문단 사이에 빈 줄 하나를 넣습니다.
+- 한 문단은 2~3문장을 넘기지 않습니다.
+- 인사말, 머리말, 맺음말, 서명, 학원 이름, 선생님 이름을 쓰지 마세요.
+  그 부분은 앱이 본문 앞뒤에 따로 붙입니다.
+- 중괄호 { } 를 쓰지 마세요. 자리표시자를 만들지 말고 실제 문장만 씁니다.
+- 본문 전체 200~350자.`;
+
 const DEFAULT_HEAD=`[{학원명}] {학생명} 학생 {학부모호칭}
 
 안녕하세요, {선생님}입니다.`;
 const DEFAULT_TAIL=`감사합니다.
 {선생님} 드림`;
-/* 예전 기본 틀 — 머리말·맺음말이 섞여 있어 자동으로 교체한다 */
-const OLD_AI_TPL_V1=`[{학원명}] {학생명} 학생 {학부모호칭}
 
-안녕하세요, {선생님}입니다.
-(1) 최근 학습 상황 — 사실 위주로 2~3문장
-(2) 잘하고 있는 점 또는 보완이 필요한 점 — 1~2문장
-(3) 가정에서 도와주실 부분이나 안내 — 1문장 (메모에 없으면 생략)
-
-감사합니다.`;
+/* 성을 뺀 이름 · 부르는 이름 */
+const COMPOUND_SURNAMES=['남궁','황보','제갈','선우','사공','서문','독고','동방','하후','을지'];
+function givenName(s){
+  if(s&&s.nickname&&String(s.nickname).trim())return String(s.nickname).trim();
+  const n=String((s&&s.name)||'').trim();
+  if(n.length<=1)return n;
+  if(n.length>=3&&COMPOUND_SURNAMES.includes(n.slice(0,2)))return n.slice(2);
+  return n.slice(1);
+}
+function callName(s){            // 받침 있으면 '이' 를 붙인다 (서연 → 서연이, 민서 → 민서)
+  const g=givenName(s);if(!g)return '';
+  const c=g.charCodeAt(g.length-1);
+  if(c<0xAC00||c>0xD7A3)return g;
+  return ((c-0xAC00)%28)!==0 ? g+'이' : g;
+}
 
 let smsSel=new Set();
 let smsMode='bulk';
@@ -2107,7 +2209,7 @@ function lenLabel(t){
 function fillVars(tpl,s){
   const st=data.settings;
   const map={
-    '학생명':s.name||'','학년':s.grade||'','학교':s.school||'','관':s.hall||'',
+    '학생명':s.name||'','이름':givenName(s),'이름이':callName(s),'학년':s.grade||'','학교':s.school||'','관':s.hall||'',
     '과목':(s.subjects||[]).join('·'),
     '요일':(s.weekday!==''&&s.weekday!=null)?WD[s.weekday]+'요일':'',
     '학원명':st.academyName||'','선생님':st.teacherName||'',
@@ -2161,6 +2263,16 @@ async function gasJobFallback(payload){
     }
   }
   throw new Error('응답 시간 초과 — Apps Script 배포를 새 버전으로 다시 배포했는지 확인하세요');
+}
+/* 모델이 JSON 형식 지시를 못 받는 경우까지 견디도록 관대하게 파싱한다 */
+function parseLooseJSON(t){
+  const raw=String(t||'').trim();
+  try{return JSON.parse(raw);}catch(e){}
+  const fence=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if(fence){try{return JSON.parse(fence[1].trim());}catch(e){}}
+  const a=raw.indexOf('{'),b=raw.lastIndexOf('}');
+  if(a>=0&&b>a){try{return JSON.parse(raw.slice(a,b+1));}catch(e){}}
+  throw new Error('AI 응답을 읽지 못했습니다');
 }
 async function aiChat(messages,opt){
   opt=opt||{};
@@ -2353,32 +2465,7 @@ function clearEachBuilt(){
 
 /* ---------- AI ---------- */
 function aiSystemForEach(){
-  return `당신은 한국 학원 선생님이 학부모에게 보낼 문자의 **본문만** 쓰는 조수입니다.
-
-[가장 중요]
-- 인사말, 머리말, 맺음말, 서명, 학원 이름, 선생님 이름을 절대 쓰지 마세요.
-  그 부분은 앱이 본문 앞뒤에 따로 붙입니다. 당신은 가운데 본문만 씁니다.
-- 중괄호 { } 를 쓰지 마세요. 자리표시자를 만들지 말고 실제 문장만 씁니다.
-
-[내용 규칙]
-- 선생님이 급하게 적은 메모를 학부모용 문장으로 정리합니다.
-- 메모에 없는 사실은 절대 지어내지 않습니다. 점수·등수·출결 같은 수치는 메모에 있는 것만 씁니다.
-- 여러 날짜에 걸쳐 적힌 메모를 하나로 통합합니다. 날짜순 나열이 아니라
-  학습 내용 / 수업 태도 / 과제 / 안내사항처럼 주제별로 묶습니다.
-- 날짜는 앞으로 예정된 일정처럼 꼭 필요할 때만 언급합니다.
-- 같은 이야기가 여러 번 나오면 하나로 합칩니다.
-- 존댓말로 정중하고 담백하게. 이모지, 과장, 느낌표 남발 금지.
-- 비난조 대신 사실과 다음 행동 중심으로 씁니다.
-- 학생 이름은 주어진 이름을 그대로 씁니다.
-
-[형식 규칙]
-- 아래 정형 틀의 각 항목을 **하나의 문단**으로 씁니다.
-- 문단과 문단 사이에는 반드시 **빈 줄 하나**를 넣습니다. (읽기 쉽게 하기 위함)
-- 한 문단은 2~3문장을 넘기지 않습니다.
-- 본문 전체 180~320자.
-
-[정형 틀 — 본문 구성]
-${data.settings.aiTemplate||DEFAULT_AI_TPL}`;
+  return (data.settings.aiSystem||'').trim()||DEFAULT_AI_SYSTEM;
 }
 function memoTextOf(sid){
   return notesOf(sid).map(n=>shortDate(n.at)+' '+n.text).join('\n');
@@ -2392,7 +2479,7 @@ async function aiPolishOne(id){
   try{
     const txt=await aiChat([
       {role:'system',content:aiSystemForEach()},
-      {role:'user',content:`학생 이름: ${s.name}\n학년: ${s.grade||''}\n\n[선생님 메모]\n${memo}`}
+      {role:'user',content:`부르는 이름: ${callName(s)}\n학년: ${s.grade||''}\n\n[선생님 메모]\n${memo}`}
     ],{temperature:0.4});
     sd.built[id]=txt;save();renderSmsEach();renderSmsPreview();toast('정리했습니다');
   }catch(e){
@@ -2409,12 +2496,12 @@ async function aiPolishEachAll(){
   try{
     for(let i=0;i<targets.length;i+=15){
       const chunk=targets.slice(i,i+15);
-      const payload=chunk.map(s=>({id:s.id,이름:s.name,학년:s.grade||'',메모:memoTextOf(s.id)}));
+      const payload=chunk.map(s=>({id:s.id,부르는이름:callName(s),학년:s.grade||'',메모:memoTextOf(s.id)}));
       const txt=await aiChat([
         {role:'system',content:aiSystemForEach()+`\n\n여러 학생을 한 번에 처리합니다. 반드시 아래 JSON 형식으로만 답하세요.\n{"결과":[{"id":"입력받은 id 그대로","문자":"완성된 문자 본문"}]}`},
         {role:'user',content:JSON.stringify({학생들:payload},null,1)}
       ],{json:true,temperature:0.4});
-      let parsed;try{parsed=JSON.parse(txt);}catch(e){throw new Error('AI 응답 형식 오류');}
+      const parsed=parseLooseJSON(txt);
       (parsed['결과']||parsed.results||[]).forEach(r=>{
         if(r&&r.id&&(r['문자']||r.text))sd.built[r.id]=String(r['문자']||r.text).trim();
       });
@@ -2497,10 +2584,11 @@ function fillAiModelList(){
   dl.innerHTML=list.map(m=>`<option value="${esc(m)}"></option>`).join('');
 }
 function resetAiTemplate(){
-  data.settings.aiTemplate=DEFAULT_AI_TPL;save();
-  if($('set_aitpl'))$('set_aitpl').value=DEFAULT_AI_TPL;
-  checkAiTemplate();
-  toast('본문 전용 기본 틀로 되돌렸습니다');
+  confirmModal('지시문 되돌리기','직접 고치신 내용이 사라지고 기본 지시문으로 돌아갑니다.',()=>{
+    data.settings.aiSystem=DEFAULT_AI_SYSTEM;save();
+    if($('set_aitpl'))$('set_aitpl').value=DEFAULT_AI_SYSTEM;
+    checkAiTemplate();toast('기본 지시문으로 되돌렸습니다');
+  });
 }
 function resetHeadTail(){
   const sd=smsData();
@@ -2669,21 +2757,33 @@ function importPhones(){
 /* ---------- 초기화 ---------- */
 function migrateAiTemplate(){
   const st=data.settings;
-  if(!st.aiTemplate||st.aiTemplate.trim()===OLD_AI_TPL_V1.trim()){
-    st.aiTemplate=DEFAULT_AI_TPL;   // 예전 틀(머리말 포함)은 조용히 교체
-  }
+  if(!st.aiSystem||!st.aiSystem.trim())st.aiSystem=DEFAULT_AI_SYSTEM;
   const sd=smsData();
   if(sd.eachHead==null||sd.eachHead==='')sd.eachHead=DEFAULT_HEAD;
   if(sd.eachTail==null||sd.eachTail==='')sd.eachTail=DEFAULT_TAIL;
 }
+/* 앱이 기대하는 구조 규칙 — 지시문에서 빠지면 알려준다 */
+const AI_RAILS=`
+[형식 — 이 부분은 앱이 동작하는 데 필요합니다]
+- 각 항목을 하나의 문단으로 쓰고, 문단 사이에 빈 줄 하나를 넣습니다.
+- 인사말, 머리말, 맺음말, 서명, 학원 이름, 선생님 이름을 쓰지 마세요.
+  그 부분은 앱이 본문 앞뒤에 따로 붙입니다.
+- 중괄호 { } 를 쓰지 마세요.`;
 function checkAiTemplate(){
   const box=$('aiTplWarn');if(!box)return;
-  const t=data.settings.aiTemplate||'';
-  const bad=/\{(학원명|선생님|학부모호칭)\}|안녕하세요|감사합니다|드림/.test(t);
-  box.innerHTML=bad
-    ?`<div class="warnbar">이 정형 틀에 <b>인사말·머리말·맺음말</b>이 들어 있습니다.
-       그 부분은 [개별] 탭의 머리말·맺음말 칸이 정확하게 처리하므로, 틀에는 <b>본문 구성만</b> 남기는 편이 좋습니다.
-       <button class="btn sm" style="margin-left:6px" onclick="resetAiTemplate()">본문 전용 기본값으로</button></div>`:'';
+  const t=data.settings.aiSystem||'';
+  const missHead=!/머리말|맺음말|서명/.test(t);
+  const missBrace=!/중괄호/.test(t);
+  box.innerHTML=(missHead||missBrace)
+    ?`<div class="warnbar">이 지시문에 <b>구조 규칙</b>이 빠져 있습니다${missHead?' — 머리말·서명 금지':''}${missBrace?(missHead?', 중괄호 금지':' — 중괄호 금지'):''}.
+       이대로 두면 인사가 두 번 나오거나 <code>{학원명}</code> 같은 글자가 문자에 그대로 갈 수 있습니다.
+       <button class="btn sm" style="margin-left:6px" onclick="appendAiRails()">구조 규칙 넣기</button></div>`:'';
+}
+function appendAiRails(){
+  data.settings.aiSystem=((data.settings.aiSystem||'').trimEnd())+'\n'+AI_RAILS;
+  save();
+  if($('set_aitpl'))$('set_aitpl').value=data.settings.aiSystem;
+  checkAiTemplate();toast('구조 규칙을 덧붙였습니다');
 }
 function initSms(){
   migrateAiTemplate();
@@ -2705,7 +2805,6 @@ function initAll(){
   renderHallSelectors();resetStudentForm();renderPresetChips();renderStudents();refreshSchoolList();
   $('m_month').value=todayMonth();
   fillScoreSelectors();renderSettings();
-  if(!data.settings.aiTemplate)data.settings.aiTemplate=DEFAULT_AI_TPL;
   initSms();renderNotesPage();
 }
 function boot(){
