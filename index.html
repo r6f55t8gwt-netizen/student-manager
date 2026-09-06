@@ -660,6 +660,8 @@ select.mini,input.mini{padding:6px 8px}
         <h3>문자 · AI 설정</h3>
         <div class="settrow"><label>선생님 이름(서명)</label><input id="set_teacher" placeholder="예: 박수훈"></div>
         <div class="settrow"><label>내 번호(테스트용)</label><input id="set_myphone" placeholder="01012345678"></div>
+        <div class="settrow"><label>발신 번호</label><input id="set_sender" placeholder="01044919032"></div>
+        <div class="small" style="margin:-4px 0 12px">학부모 폰에 찍히는 번호입니다. 듀얼번호를 쓰신다면 그 번호를 넣으세요. <b>표시용일 뿐</b>이고, 실제 발신번호는 맥 브리지 설정(<code>dial_prefix</code>)이 정합니다.</div>
         <div class="settrow"><label>AI 모델</label><input id="set_aimodel" placeholder="gpt-4o-mini"></div>
         <div class="small" style="margin:6px 0 12px">ChatGPT 키는 브라우저가 아니라 <b>Apps Script 스크립트 속성</b>(OPENAI_API_KEY)에 둡니다. 이 페이지에는 키를 입력하지 않습니다.</div>
         <div class="field">
@@ -714,11 +716,11 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 6 · 2026-09-06 (학생 메모 누적 · AI 통합 · 발송 이력)';
+const APP_VERSION='빌드 7 · 2026-09-06 (듀얼번호 발신 표시)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
-            teacherName:'',myPhone:'',aiModel:'gpt-4o-mini',aiTemplate:''},
+            teacherName:'',myPhone:'',senderNumber:'',aiModel:'gpt-4o-mini',aiTemplate:''},
   subjects:['수학','영어','국어','과학'],
   halls:['1관','2관','3관'],
   presets:[],
@@ -1318,6 +1320,7 @@ function renderSettings(){
   if($('set_teacher')){
     $('set_teacher').value=s.teacherName||'';
     $('set_myphone').value=s.myPhone||'';
+    $('set_sender').value=fmtPhone(s.senderNumber||'');
     $('set_aimodel').value=s.aiModel||'gpt-4o-mini';
     $('set_aitpl').value=s.aiTemplate||'';
   }
@@ -1335,6 +1338,7 @@ function saveSettings(){
   if($('set_teacher')){
     s.teacherName=$('set_teacher').value.trim();
     s.myPhone=digitsOnly($('set_myphone').value);
+    s.senderNumber=digitsOnly($('set_sender').value);
     s.aiModel=$('set_aimodel').value.trim()||'gpt-4o-mini';
     s.aiTemplate=$('set_aitpl').value;
   }
@@ -2385,6 +2389,10 @@ function resetAiTemplate(){
   toast('기본 정형 틀로 되돌렸습니다');
 }
 
+function senderLabel(){
+  const n=digitsOnly(data.settings.senderNumber||'');
+  return n?fmtPhone(n):'';
+}
 /* ---------- 미리보기 ---------- */
 function smsBuildList(){
   const sd=smsData();const out=[];
@@ -2416,7 +2424,8 @@ function renderSmsPreview(){
   }
   const totalB=list.reduce((a,x)=>a+smsBytes(x.message),0);
   const over=list.filter(x=>smsBytes(x.message)>90).length;
-  let h=`<div class="okbar">받는 사람 <b>${list.length}명</b> · 모두 <b>개별 문자</b>로 발송됩니다${over?` · 장문(LMS) ${over}건`:''}</div>`;
+  const snd=senderLabel();
+  let h=`<div class="okbar">받는 사람 <b>${list.length}명</b> · 모두 <b>개별 문자</b>로 발송됩니다${over?` · 장문(LMS) ${over}건`:''}${snd?` · 발신번호 <b>${esc(snd)}</b>`:''}</div>`;
   h+='<div class="smsgrid">'+list.map(x=>{
     const L=lenLabel(x.message);
     return `<div class="smsrow">
@@ -2437,6 +2446,7 @@ async function smsSend(){
   confirmModal('문자 발송',
     `<div style="font-size:13.5px;line-height:1.6">
       <b>${list.length}명</b>에게 개별 문자를 보냅니다. 보낸 문자는 취소할 수 없습니다.<br>
+      ${senderLabel()?`학부모 폰에 찍히는 발신번호: <b>${esc(senderLabel())}</b><br>`:''}
       <span class="small">첫 번째 수신자 예시 — ${esc(sample.name)} (${esc(fmtPhone(sample.phone))})</span>
       <div class="built" style="margin-top:8px;max-height:180px;overflow:auto">${esc(sample.message)}</div>
     </div>`,
