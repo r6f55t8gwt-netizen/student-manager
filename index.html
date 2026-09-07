@@ -206,7 +206,9 @@ select.mini,input.mini{padding:6px 8px}
 .scorepick .pick{background:#fff}
 .scorepick .tplchip{background:#fff}
 /* ===== 문자함 ===== */
-.navdot{display:none;margin-left:6px;width:7px;height:7px;border-radius:50%;background:var(--accent);vertical-align:middle}
+.navdot{display:none;margin-left:7px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--accent);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;
+  vertical-align:middle;font-variant-numeric:tabular-nums}
 .navdot.on{display:inline-block}
 .chatwrap{display:flex;gap:12px;align-items:stretch;min-height:420px}
 .chatside{flex:0 0 290px;border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:62vh;background:#fff}
@@ -861,7 +863,7 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 19 · 2026-09-07 (문자함 자동 갱신)';
+const APP_VERSION='빌드 20 · 2026-09-07 (안 읽음 배지)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
@@ -973,7 +975,7 @@ document.querySelectorAll('#nav a').forEach(a=>{
     a.classList.add('active');
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     $('page-'+a.dataset.page).classList.add('active');
-    if(a.dataset.page==='chat'&&typeof chatTick==='function')chatTick();
+    if(a.dataset.page==='chat'&&typeof chatTick==='function')chatTick(true);
     if(a.dataset.page==='monthly')renderMonthly();
     if(a.dataset.page==='scores'){fillScoreSelectors();renderScoreTable();renderChart();}
     if(a.dataset.page==='board')fillBoardSelectors();
@@ -3434,12 +3436,25 @@ function unreadOf(sid){
   const seen=chatData().readAt[sid]||0;
   return inboxOf(sid).filter(m=>m.ts>seen).length;
 }
+function unreadTotal(){
+  return data.students.filter(s=>s.active).reduce((n,s)=>n+unreadOf(s.id),0);
+}
+/* 왼쪽 [문자함] 메뉴에 안 읽은 개수를 띄운다. 어느 탭에 있든 보인다. */
+function updateNavBadge(){
+  const el=$('navUnread'); if(!el)return;
+  const n=unreadTotal();
+  el.textContent=n>99?'99+':String(n);
+  el.classList.toggle('on',n>0);
+  const base='학생 종합 관리';
+  document.title=n>0?`(${n}) ${base}`:base;
+}
 function markRead(sid){
   const list=inboxOf(sid);
   if(!list.length)return;
   const newest=Math.max(...list.map(m=>m.ts));
   const sd=chatData();
   if((sd.readAt[sid]||0)<newest){sd.readAt[sid]=newest;save();}
+  updateNavBadge();
 }
 
 /* ---------- 학생 명단 번호를 서버에 알려준다 (브리지가 개인 문자를 거르는 기준) ---------- */
@@ -3471,7 +3486,8 @@ function renderChatPage(){
     .sort((a,b)=>(b.un>0)-(a.un>0)||((b.last&&b.last.ts)||0)-((a.last&&a.last.ts)||0)
               ||a.s.name.localeCompare(b.s.name,'ko'));
 
-  const tot=data.students.filter(s=>s.active).reduce((n,s)=>n+unreadOf(s.id),0);
+  const tot=unreadTotal();
+  updateNavBadge();
   const cnt=$('chatUnreadCount'); if(cnt)cnt.textContent=tot?`안 읽음 ${tot}`:'안 읽음 없음';
   const st=$('chatSyncAt');
   if(st)st.textContent=chatPulledAt?`마지막 확인 ${fmtKST(new Date(chatPulledAt).toISOString())}`:'아직 안 불러옴';
@@ -3555,31 +3571,42 @@ async function chatSend(){
 /* ---------- 자동 갱신 ----------
    문자함 탭을 실제로 보고 있을 때만 돈다.
    다른 탭이거나 창이 뒤에 있으면 멈춘다 — 헛호출로 Apps Script 를 때리지 않기 위해. */
-const CHAT_POLL_MS=20000;
+const CHAT_POLL_MS=20000;      // 문자함을 보고 있을 때
+const CHAT_POLL_BG_MS=60000;   // 다른 탭에 있을 때 (배지 갱신용)
 let chatTimer=null, chatPolling=false;
 
-function chatVisible(){
+function chatPageOn(){
   const pg=$('page-chat');
-  return !!pg && pg.classList.contains('active') && document.visibilityState==='visible';
+  return !!pg && pg.classList.contains('active');
 }
-async function chatTick(){
-  if(chatPolling||!chatVisible()||!cloud.url)return;
+function chatVisible(){
+  return chatPageOn() && document.visibilityState==='visible';
+}
+async function chatTick(force){
+  // 창이 뒤에 있으면 아무것도 하지 않는다 (배터리)
+  if(chatPolling||!cloud.url||document.visibilityState!=='visible')return;
+  const onChat=chatPageOn();
+  const need=onChat?CHAT_POLL_MS:CHAT_POLL_BG_MS;
+  if(!force&&chatPulledAt&&Date.now()-chatPulledAt<need-1500)return;
   chatPolling=true;
   try{
     const before=chatRows.length?chatRows[chatRows.length-1].id:'';
     if(await chatPull(true)){
       const after=chatRows.length?chatRows[chatRows.length-1].id:'';
+      updateNavBadge();
       // 답장을 읽던 중에 화면이 튀지 않게, 새 문자가 있을 때만 다시 그린다
-      if(before!==after)renderChatPage();
-      else{const st=$('chatSyncAt');
-        if(st)st.textContent=`마지막 확인 ${fmtKST(new Date(chatPulledAt).toISOString())}`;}
+      if(onChat){
+        if(before!==after)renderChatPage();
+        else{const st=$('chatSyncAt');
+          if(st)st.textContent=`마지막 확인 ${fmtKST(new Date(chatPulledAt).toISOString())}`;}
+      }
     }
   }finally{chatPolling=false;}
 }
 function startChatPoll(){
   if(chatTimer)return;
-  chatTimer=setInterval(chatTick,CHAT_POLL_MS);
-  document.addEventListener('visibilitychange',()=>{if(chatVisible())chatTick();});
+  chatTimer=setInterval(()=>chatTick(false),10000);   // 10초마다 검사, 실제 호출은 위 규칙대로
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chatTick(true);});
 }
 
 async function chatRefresh(){
@@ -3591,7 +3618,9 @@ async function chatRefresh(){
 function initChat(){
   if(!$('chatList'))return;
   renderChatPage();
-  if(cloud.url&&Date.now()-chatPulledAt>60000)chatPull(true).then(()=>renderChatPage());
+  updateNavBadge();
+  if(cloud.url&&Date.now()-chatPulledAt>60000)
+    chatPull(true).then(()=>{updateNavBadge();renderChatPage();});
   startChatPoll();
 }
 
