@@ -619,6 +619,7 @@ select.mini,input.mini{padding:6px 8px}
           <h3 style="margin:0">발송 대기열 · 이력</h3>
           <div class="row" style="margin:0">
             <button class="btn sm" onclick="smsRefreshQueue()">새로고침</button>
+            <button class="btn sm" onclick="smsRequeueStuck()">멈춘 건 다시 보내기</button>
             <button class="btn sm danger" onclick="smsCancelPending()">대기 중 전부 취소</button>
           </div>
         </div>
@@ -797,7 +798,7 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 15 · 2026-09-06 (단체 AI 지시문 편집)';
+const APP_VERSION='빌드 16 · 2026-09-07 (발송 중 멈춤 복구)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
@@ -1595,6 +1596,8 @@ function doPost(e) {
       out = enqueue(body.items || [], body.batchId || '');
     } else if (action === 'ai') {
       out = aiCall(body);
+    } else if (action === 'requeueStuck') {
+      out = requeueStuck();
     } else if (action === 'cancelPending') {
       out = cancelPending(body.batchId || '');
     } else {
@@ -1683,6 +1686,25 @@ function enqueue(items, batchId) {
   }
 }
 
+/* 브리지가 가져갔지만 결과를 못 보낸 줄을 되살린다.
+   맥이 잠들거나 브리지가 재시작되면 'sending' 인 채로 영영 남아 다시는 발송되지 않았다. */
+var STALE_SENDING_MIN = 10;
+
+function reviveStuck_(sh, vals) {
+  var cutoff = Date.now() - STALE_SENDING_MIN * 60 * 1000;
+  var n = 0;
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][5]) !== 'sending') continue;
+    var t = Date.parse(String(vals[i][6] || ''));   // 가져간 시각
+    if (!isNaN(t) && t > cutoff) continue;          // 아직 처리 중일 수 있다
+    sh.getRange(i + 2, 6).setValue('pending');
+    sh.getRange(i + 2, 8).setValue('브리지가 응답하지 않아 다시 대기열에 넣었습니다');
+    vals[i][5] = 'pending';
+    n++;
+  }
+  return n;
+}
+
 /* 맥 브리지가 가져가면서 동시에 sending 으로 잠금 */
 function claimPending(limit) {
   var lock = LockService.getScriptLock();
@@ -1692,10 +1714,13 @@ function claimPending(limit) {
     var last = sh.getLastRow();
     if (last < 2) return { ok: true, items: [] };
     var vals = sh.getRange(2, 1, last - 1, QCOLS.length).getValues();
+    var revived = reviveStuck_(sh, vals);
+    var now = new Date().toISOString();
     var picked = [];
     for (var i = 0; i < vals.length && picked.length < limit; i++) {
       if (String(vals[i][5]) === 'pending') {
         sh.getRange(i + 2, 6).setValue('sending');
+        sh.getRange(i + 2, 7).setValue(now);   // 가져간 시각 — 멈춘 줄 판별용
         picked.push({
           id: vals[i][0], name: vals[i][2], phone: String(vals[i][3]),
           message: String(vals[i][4]), batchId: vals[i][8]
@@ -1703,7 +1728,30 @@ function claimPending(limit) {
       }
     }
     SpreadsheetApp.flush();
-    return { ok: true, items: picked };
+    return { ok: true, items: picked, revived: revived };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* 앱에서 손으로 되돌릴 때 — 시간 안 따지고 전부 */
+function requeueStuck() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: '다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.' };
+  try {
+    var sh = queueSheet();
+    var last = sh.getLastRow();
+    if (last < 2) return { ok: true, requeued: 0 };
+    var vals = sh.getRange(2, 1, last - 1, QCOLS.length).getValues();
+    var n = 0;
+    for (var i = 0; i < vals.length; i++) {
+      if (String(vals[i][5]) !== 'sending') continue;
+      sh.getRange(i + 2, 6).setValue('pending');
+      sh.getRange(i + 2, 8).setValue('멈춰 있어 다시 대기열에 넣었습니다');
+      n++;
+    }
+    SpreadsheetApp.flush();
+    return { ok: true, requeued: n };
   } finally {
     lock.releaseLock();
   }
@@ -2930,7 +2978,11 @@ async function smsRefreshQueue(){
     if(!rows.length){wrap.innerHTML='<div class="empty">발송 기록이 없습니다.</div>';return;}
     const badge=s=>({pending:['대기','man'],sending:['발송 중','man'],sent:['발송됨','auto'],
       error:['실패','man'],cancelled:['취소','man']})[s]||[s,'man'];
-    let h='<div class="qlist">';
+    const stuck=rows.filter(x=>x.status==='sending'&&staleMin(x)>=5).length;
+    let h=stuck?`<div class="warnbar">[발송 중] 에서 ${stuck}건이 5분 넘게 멈춰 있습니다.
+      맥의 서버가 꺼졌거나 메시지 앱이 멈춘 상태일 수 있습니다 —
+      <b>[멈춘 건 다시 보내기]</b> 를 누르면 다시 대기열로 돌아갑니다.</div>`:'';
+    h+='<div class="qlist">';
     rows.forEach(x=>{
       const b=badge(x.status);
       const t=String(x.sentAt||x.createdAt||'').replace('T',' ').slice(5,16);
@@ -2950,6 +3002,27 @@ async function smsRefreshQueue(){
     });
     wrap.innerHTML=h+'</div>';
   }catch(e){wrap.innerHTML=`<div class="errbar">불러오지 못했습니다: ${esc(e.message)}</div>`;}
+}
+/* 그 줄이 몇 분째 그 상태인지 */
+function staleMin(x){
+  const t=Date.parse(x.sentAt||x.createdAt||'');
+  if(isNaN(t))return 0;
+  return Math.max(0,(Date.now()-t)/60000);
+}
+/* '발송 중' 에서 멈춘 건을 다시 대기열로 되돌린다.
+   맥이 잠들거나 브리지가 재시작되면 그 상태로 갇혀 다시는 나가지 않는다. */
+function smsRequeueStuck(){
+  confirmModal('멈춘 건 다시 보내기',
+    '[발송 중] 에서 멈춰 있는 건을 다시 대기열에 넣습니다.\n\n'+
+    '맥이 실제로 보내는 중이라면 같은 문자가 두 번 갈 수 있습니다. '+
+    '몇 분째 [발송 중] 그대로일 때만 쓰세요.',async()=>{
+    try{
+      const r=await gasCall({action:'requeueStuck'});
+      toast(`${r.requeued}건을 다시 대기열에 넣었습니다`);
+      smsRefreshQueue();
+      setTimeout(smsRefreshQueue,6000);
+    }catch(e){toast('실패: '+e.message);}
+  });
 }
 function smsCancelPending(){
   confirmModal('대기 취소','아직 보내지 않은 대기 건을 모두 취소합니다. 이미 발송된 문자는 되돌릴 수 없습니다.',async()=>{
