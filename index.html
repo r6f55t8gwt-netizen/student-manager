@@ -205,6 +205,34 @@ select.mini,input.mini{padding:6px 8px}
 .scorepick .sph{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:7px}
 .scorepick .pick{background:#fff}
 .scorepick .tplchip{background:#fff}
+/* ===== 문자함 ===== */
+.navdot{display:none;margin-left:6px;width:7px;height:7px;border-radius:50%;background:var(--accent);vertical-align:middle}
+.navdot.on{display:inline-block}
+.chatwrap{display:flex;gap:12px;align-items:stretch;min-height:420px}
+.chatside{flex:0 0 290px;border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:62vh;background:#fff}
+.chatpane{flex:1 1 auto;min-width:0;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;background:#fff}
+.chatrow{padding:9px 11px;border-bottom:1px solid var(--line);cursor:pointer}
+.chatrow:last-child{border-bottom:none}
+.chatrow:hover{background:#faf8f4}
+.chatrow.on{background:var(--accent-soft)}
+.cr1{display:flex;align-items:center;gap:6px;min-width:0}
+.cr1 b{font-weight:600}
+.crg{font-size:11.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crt{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cr2{margin-top:3px;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crm{color:var(--accent2);font-weight:600}
+.unread{background:var(--accent);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;font-weight:700}
+.chathead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.chatbody{flex:1 1 auto;overflow:auto;max-height:52vh;padding:12px;display:flex;flex-direction:column;gap:9px;background:#faf8f4}
+.bub{max-width:78%;width:fit-content;border-radius:12px;padding:9px 12px;font-size:13px;line-height:1.7}
+.bub .bt{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
+.bub.in{align-self:flex-start;background:#fff;border:1px solid var(--line)}
+.bub.out{align-self:flex-end;background:var(--accent);color:#fff}
+.bub .bm{margin-top:5px;font-size:10.5px;opacity:.65;font-variant-numeric:tabular-nums}
+.bub.out .bm{text-align:right}
+.chatsend{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:flex-end}
+.chatsend textarea{flex:1 1 auto;min-width:0;min-height:58px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;resize:vertical;font-size:13px;line-height:1.55}
+.chatpane .hint{padding:0 12px 10px}
 /* ===== 받는 사람 묶음 (학년 → 학교) ===== */
 .pickgrp{border:1px solid var(--line);border-radius:10px;margin-bottom:9px;overflow:hidden}
 .pickgrp:last-child{margin-bottom:0}
@@ -222,6 +250,8 @@ select.mini,input.mini{padding:6px 8px}
 .qh b{font-weight:600}
 .qph{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .qt{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.qdel{opacity:0;transition:opacity .15s}
+.qitem:hover .qdel{opacity:1}
 .qm{margin-top:5px;font-size:12.5px;color:var(--muted);line-height:1.55;word-break:break-word;overflow-wrap:anywhere}
 .qe{margin-top:5px;font-size:12px;color:var(--danger);line-height:1.5;word-break:break-word;overflow-wrap:anywhere}
 /* ===== 모바일 ===== */
@@ -231,7 +261,8 @@ select.mini,input.mini{padding:6px 8px}
   .smsrow .smsact{flex-direction:row;align-items:center;flex-wrap:wrap}
   .smsgrid,.notelist,.qlist{border-radius:9px}
   .built{padding:10px 11px;font-size:12.5px;line-height:1.7}
-  .qt{margin-left:0;flex-basis:100%}
+  .qt{margin-left:auto}
+  .qdel{opacity:1}
   .histlist{max-height:none}
   .histitem .hh{flex-wrap:wrap}
   .histitem .hh b{font-variant-numeric:tabular-nums}
@@ -240,6 +271,10 @@ select.mini,input.mini{padding:6px 8px}
   .noteitem .nx{flex:0 0 100%;justify-content:flex-end}
   .noteitem .nx .qbtn{padding:5px 9px;font-size:12px}
   .pick{padding:7px 12px;font-size:13px}
+  .chatwrap{flex-direction:column;min-height:0}
+  .chatside{flex:1 1 auto;max-height:38vh}
+  .chatbody{max-height:46vh}
+  .bub{max-width:88%}
   .pgh{font-size:12px;padding:7px 9px}
   .pickgrp .pickrow{padding:8px 9px}
   .len{white-space:normal}
@@ -255,6 +290,7 @@ select.mini,input.mini{padding:6px 8px}
     <nav class="nav" id="nav">
       <a data-page="students" class="active">학생 관리</a>
       <a data-page="monthly">월별 정산</a>
+      <a data-page="chat">문자함<span class="navdot" id="navUnread"></span></a>
       <a data-page="notes">메모</a>
       <a data-page="sms">문자 발송</a>
       <a data-page="scores">성적 관리</a>
@@ -469,6 +505,32 @@ select.mini,input.mini{padding:6px 8px}
     </section>
 
 
+    <!-- ============ CHAT ============ -->
+    <section class="page" id="page-chat">
+      <h2>문자함</h2>
+      <div class="sub">학부모와 주고받은 문자를 학생별로 모아 봅니다. <b>학원 듀얼번호로 온 문자</b>만 들어옵니다.</div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">대화 <span class="badgeN" id="chatUnreadCount">안 읽음 없음</span></h3>
+          <div class="row" style="margin:0">
+            <input id="chat_q" class="mini" placeholder="이름/학교 검색" oninput="renderChatPage()"
+                   style="padding:7px 10px;border:1px solid var(--line);border-radius:8px">
+            <span class="checkline small"><input type="checkbox" id="chat_unread" style="width:auto" onchange="renderChatPage()"> 안 읽음만</span>
+            <button class="btn sm" id="chatRefreshBtn" onclick="chatRefresh()">새로고침</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:10px">
+          <span id="chatSyncAt">아직 안 불러옴</span> —
+          맥의 서버가 꺼져 있으면 그동안 온 답장이 여기 안 보입니다. 켜지면 밀린 것까지 따라옵니다.
+        </div>
+        <div class="chatwrap">
+          <div class="chatside" id="chatList"></div>
+          <div class="chatpane" id="chatPane"><div class="empty">왼쪽에서 학생을 고르세요.</div></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ NOTES ============ -->
     <section class="page" id="page-notes">
       <h2>메모</h2>
@@ -620,6 +682,7 @@ select.mini,input.mini{padding:6px 8px}
           <div class="row" style="margin:0">
             <button class="btn sm" onclick="smsRefreshQueue()">새로고침</button>
             <button class="btn sm" onclick="smsRequeueStuck()">멈춘 건 다시 보내기</button>
+            <button class="btn sm" onclick="smsClearFinished()">완료된 기록 지우기</button>
             <button class="btn sm danger" onclick="smsCancelPending()">대기 중 전부 취소</button>
           </div>
         </div>
@@ -798,7 +861,7 @@ select.mini,input.mini{padding:6px 8px}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 16 · 2026-09-07 (발송 중 멈춤 복구)';
+const APP_VERSION='빌드 19 · 2026-09-07 (문자함 자동 갱신)';
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
@@ -808,7 +871,7 @@ const defaultData=()=>({
   presets:[],
   templates:[],
   aiModels:[],
-  sms:{bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{}},
+  sms:{bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{},readAt:{},chatOut:[]},
   notes:[],
   history:[],
   students:[],
@@ -826,8 +889,9 @@ function migrate(d){
   d.settings=Object.assign({},base.settings,d.settings||{});
   d.templates=d.templates||[];
   d.aiModels=Array.isArray(d.aiModels)?d.aiModels:[];
-  d.sms=Object.assign({bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{}},d.sms||{});
-  d.sms.memo=d.sms.memo||{}; d.sms.built=d.sms.built||{};
+  d.sms=Object.assign({bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{},readAt:{}},d.sms||{});
+  d.sms.memo=d.sms.memo||{}; d.sms.built=d.sms.built||{}; d.sms.readAt=d.sms.readAt||{};
+  if(!Array.isArray(d.sms.chatOut))d.sms.chatOut=[];
   if(!Array.isArray(d.notes))d.notes=[];
   if(!Array.isArray(d.history))d.history=[];
   // 예전 자유 메모칸에 적어둔 내용을 메모 목록으로 옮긴다 (한 번만)
@@ -909,6 +973,7 @@ document.querySelectorAll('#nav a').forEach(a=>{
     a.classList.add('active');
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     $('page-'+a.dataset.page).classList.add('active');
+    if(a.dataset.page==='chat'&&typeof chatTick==='function')chatTick();
     if(a.dataset.page==='monthly')renderMonthly();
     if(a.dataset.page==='scores'){fillScoreSelectors();renderScoreTable();renderChart();}
     if(a.dataset.page==='board')fillBoardSelectors();
@@ -962,6 +1027,8 @@ function saveStudent(){
   else{data.students.push(Object.assign({id:uid(),active:true},obj));toast('학생이 추가되었습니다');}
   save();resetStudentForm();renderStudents();refreshSchoolList();
   if(typeof renderSmsTargets==='function')renderSmsTargets();
+  if(typeof pushPhones==='function')pushPhones();
+  if(typeof renderChatPage==='function')renderChatPage();
 }
 function editStudent(id){
   const s=studentById(id);
@@ -1556,6 +1623,11 @@ function doGet(e) {
     if (action === 'ping') {
       return raw({ ok: true, time: new Date().toISOString() });
     }
+    // 브리지가 개인 문자를 걸러내는 데 쓰는 학부모 번호 명단
+    if (action === 'phones') {
+      requireBridge(p.token);
+      return raw({ ok: true, keys: getPhones() });
+    }
     // 작업 결과 폴링 (CORS 막혔을 때의 우회로)
     if (action === 'jobresult') {
       var v = CacheService.getScriptCache().get('job_' + p.jobId);
@@ -1565,6 +1637,9 @@ function doGet(e) {
 
     if (action === 'models') {
       return reply(cb, listModels());
+    }
+    if (action === 'inbox') {
+      return reply(cb, { ok: true, rows: inboxTail(Number(p.n) || 200) });
     }
     if (action === 'queuestat') {
       return reply(cb, { ok: true, rows: queueTail(Number(p.n) || 60) });
@@ -1585,7 +1660,11 @@ function doPost(e) {
   var action = body.action || 'push';
   var out;
   try {
-    if (action === 'bridgeDone') {
+    if (action === 'inboxPush') {
+      // 브리지 전용 — 앱 토큰 검사보다 앞에 있어야 한다
+      requireBridge(body.token);
+      out = inboxPush(body.items || []);
+    } else if (action === 'bridgeDone') {
       requireBridge(body.token);
       out = markDone(body.results || []);
     } else if (TOKEN && body.token !== TOKEN) {
@@ -1596,6 +1675,12 @@ function doPost(e) {
       out = enqueue(body.items || [], body.batchId || '');
     } else if (action === 'ai') {
       out = aiCall(body);
+    } else if (action === 'setPhones') {
+      out = setPhones(body.list || []);
+    } else if (action === 'deleteInbox') {
+      out = deleteInbox(body.ids || []);
+    } else if (action === 'deleteQueue') {
+      out = deleteQueue(body.ids || [], body.mode || '');
     } else if (action === 'requeueStuck') {
       out = requeueStuck();
     } else if (action === 'cancelPending') {
@@ -1787,6 +1872,125 @@ function cancelPending(batchId) {
     if (isTarget) { sh.getRange(i + 2, 6).setValue('cancelled'); n++; }
   }
   return { ok: true, cancelled: n };
+}
+
+/* 대기열 기록 삭제.
+   mode='finished' 면 끝난 것(발송됨·실패·취소)만. ids 를 주면 그 줄만.
+   아직 안 끝난 pending/sending 은 절대 지우지 않는다 — 지우면 보낼 문자가 사라진다. */
+function deleteQueue(ids, mode) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: '다른 작업이 진행 중입니다. 잠시 후 다시 시도하세요.' };
+  try {
+    var sh = queueSheet();
+    var last = sh.getLastRow();
+    if (last < 2) return { ok: true, deleted: 0 };
+    var vals = sh.getRange(2, 1, last - 1, QCOLS.length).getValues();
+    var want = {};
+    (ids || []).forEach(function (x) { want[String(x)] = 1; });
+    var DONE = { sent: 1, error: 1, cancelled: 1 };
+    var rows = [];
+    for (var i = 0; i < vals.length; i++) {
+      var st = String(vals[i][5]);
+      if (!DONE[st]) continue;                       // 안 끝난 건 건드리지 않는다
+      if (mode === 'finished' || want[String(vals[i][0])]) rows.push(i + 2);
+    }
+    for (var k = rows.length - 1; k >= 0; k--) sh.deleteRow(rows[k]);   // 아래에서 위로
+    SpreadsheetApp.flush();
+    return { ok: true, deleted: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ================= 받은 문자 ================= */
+
+var ICOLS = ['id', 'at', 'phone', 'text'];
+
+function inboxSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('INBOX');
+  if (!sh) {
+    sh = ss.insertSheet('INBOX');
+    sh.getRange(1, 1, 1, ICOLS.length).setValues([ICOLS]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/* 맥 브리지가 새로 받은 문자를 밀어 넣는다. id 는 맥의 메시지 번호라 중복이 안 생긴다. */
+function inboxPush(items) {
+  if (!items || !items.length) return { ok: true, added: 0 };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: '다른 작업이 진행 중입니다.' };
+  try {
+    var sh = inboxSheet();
+    var last = sh.getLastRow();
+    var have = {};
+    if (last >= 2) {
+      var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) have[String(ids[i][0])] = 1;
+    }
+    var rows = [];
+    items.forEach(function (it) {
+      var id = String(it.id || '');
+      if (!id || have[id]) return;
+      have[id] = 1;
+      rows.push([id, String(it.at || ''), String(it.phone || ''), String(it.text || '')]);
+    });
+    if (rows.length) {
+      sh.getRange(sh.getLastRow() + 1, 1, rows.length, ICOLS.length).setValues(rows);
+      SpreadsheetApp.flush();
+    }
+    return { ok: true, added: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function inboxTail(n) {
+  var sh = inboxSheet();
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var from = Math.max(2, last - n + 1);
+  var vals = sh.getRange(from, 1, last - from + 1, ICOLS.length).getValues();
+  return vals.map(function (v) {
+    return { id: v[0], at: v[1], phone: String(v[2]), text: String(v[3]) };
+  });
+}
+
+function deleteInbox(ids) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return { error: '다른 작업이 진행 중입니다.' };
+  try {
+    var sh = inboxSheet();
+    var last = sh.getLastRow();
+    if (last < 2) return { ok: true, deleted: 0 };
+    var vals = sh.getRange(2, 1, last - 1, 1).getValues();
+    var want = {};
+    (ids || []).forEach(function (x) { want[String(x)] = 1; });
+    var rows = [];
+    for (var i = 0; i < vals.length; i++) if (want[String(vals[i][0])]) rows.push(i + 2);
+    for (var k = rows.length - 1; k >= 0; k--) sh.deleteRow(rows[k]);
+    SpreadsheetApp.flush();
+    return { ok: true, deleted: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* 학생 학부모 번호 명단 — 브리지가 개인 문자를 걸러내는 데 쓴다.
+   앱이 학생을 저장할 때마다 갱신한다. 번호 뒤 8자리만 넘어온다. */
+function setPhones(list) {
+  var clean = (list || []).map(function (x) { return String(x).replace(/[^0-9]/g, ''); })
+                          .filter(function (x) { return x.length >= 8; });
+  PropertiesService.getScriptProperties()
+    .setProperty('PARENT_KEYS', JSON.stringify(clean));
+  return { ok: true, count: clean.length };
+}
+
+function getPhones() {
+  var raw = PropertiesService.getScriptProperties().getProperty('PARENT_KEYS') || '[]';
+  try { return JSON.parse(raw); } catch (e) { return []; }
 }
 
 function queueTail(n) {
@@ -2985,16 +3189,18 @@ async function smsRefreshQueue(){
     h+='<div class="qlist">';
     rows.forEach(x=>{
       const b=badge(x.status);
-      const t=String(x.sentAt||x.createdAt||'').replace('T',' ').slice(5,16);
+      const t=fmtKST(x.sentAt||x.createdAt);
       const msg=String(x.message||'').replace(/\s+/g,' ');
       // 실패한 건에만 사유를 보여준다. 발송된 건은 '발송됨' 으로 끝.
       const err=(x.status==='error'&&x.error)?`<div class="qe">${esc(String(x.error).slice(0,120))}</div>`:'';
+      const done=['sent','error','cancelled'].includes(x.status);
       h+=`<div class="qitem">
         <div class="qh">
           <b>${esc(x.name||'-')}</b>
           <span class="qph">${esc(fmtPhone(x.phone))}</span>
           <span class="tag ${b[1]}">${b[0]}</span>
           <span class="qt">${esc(t)}</span>
+          ${done&&x.id?`<button class="qbtn qdel" onclick="smsDeleteQueue(['${esc(x.id)}'])">삭제</button>`:''}
         </div>
         <div class="qm">${esc(msg.slice(0,90))}${msg.length>90?'…':''}</div>
         ${err}
@@ -3003,11 +3209,43 @@ async function smsRefreshQueue(){
     wrap.innerHTML=h+'</div>';
   }catch(e){wrap.innerHTML=`<div class="errbar">불러오지 못했습니다: ${esc(e.message)}</div>`;}
 }
+/* 시트에는 UTC(...Z)로 적히므로 한국시간으로 바꿔서 보여준다 */
+const KST_FMT=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',
+  month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+function fmtKST(v){
+  const raw=String(v||'').trim();
+  if(!raw)return '';
+  const t=Date.parse(raw);
+  // 모양이 다르면 원문을 버리지 않고 그대로 보여준다
+  if(isNaN(t))return raw.length>19?raw.replace('T',' ').slice(5,16):raw;
+  const p={};KST_FMT.formatToParts(new Date(t)).forEach(x=>p[x.type]=x.value);
+  return `${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
 /* 그 줄이 몇 분째 그 상태인지 */
 function staleMin(x){
   const t=Date.parse(x.sentAt||x.createdAt||'');
   if(isNaN(t))return 0;
   return Math.max(0,(Date.now()-t)/60000);
+}
+/* 대기열 기록 지우기 — 끝난 건만 지워진다. 학생별 [보낸 이력] 과는 별개다. */
+async function smsDeleteQueue(ids){
+  try{
+    const r=await gasCall({action:'deleteQueue',ids:ids});
+    toast(`${r.deleted}건을 지웠습니다`);
+    smsRefreshQueue();
+  }catch(e){toast('실패: '+e.message);}
+}
+function smsClearFinished(){
+  confirmModal('완료된 기록 지우기',
+    '발송됨·실패·취소된 기록을 이 목록에서 지웁니다.\n\n'+
+    '아직 [대기] 나 [발송 중] 인 건은 지워지지 않습니다.\n'+
+    '학생별 [보낸 이력] 은 그대로 남습니다.',async()=>{
+    try{
+      const r=await gasCall({action:'deleteQueue',mode:'finished'});
+      toast(`${r.deleted}건을 지웠습니다`);
+      smsRefreshQueue();
+    }catch(e){toast('실패: '+e.message);}
+  });
 }
 /* '발송 중' 에서 멈춘 건을 다시 대기열로 되돌린다.
    맥이 잠들거나 브리지가 재시작되면 그 상태로 갇혀 다시는 나가지 않는다. */
@@ -3129,6 +3367,233 @@ function initSms(){
   const warn=$('smsSetupWarn');
   if(warn)warn.innerHTML=cloud.url?'':'<div class="errbar">문자 발송은 <b>클라우드(구글시트) 연결</b>이 있어야 동작합니다. [설정 · 백업]에서 먼저 연결하세요.</div>';
 }
+/* ================= 문자함 — 학부모와 주고받은 대화 ================= */
+let chatRows=[];            // 시트에서 받아온 수신 문자 (앱 데이터에는 저장하지 않는다)
+let chatPulledAt=0;
+let chatSel=null;
+let chatBusy=false;
+
+function chatData(){
+  const sd=smsData();
+  if(!sd.readAt)sd.readAt={};
+  if(!Array.isArray(sd.chatOut))sd.chatOut=[];
+  return sd;
+}
+/* 문자함에서 보낸 답장은 여기에만 쌓인다.
+   학생별 [보낸 이력] 은 단체문자와 개별 전송만 남기기로 했다. */
+function chatOutOf(sid){
+  return chatData().chatOut.filter(x=>x.studentId===sid);
+}
+function trimChatOut(){
+  const sd=chatData();
+  const byS={};
+  sd.chatOut=sd.chatOut.filter(x=>{
+    byS[x.studentId]=(byS[x.studentId]||0)+1;
+    return byS[x.studentId]<=200;
+  }).slice(-3000);
+}
+function phoneKey8(p){const d=digitsOnly(p).replace(/^\+?82/,'0');return d.slice(-8);}
+
+/* ---------- 서버에서 받은 문자 가져오기 ---------- */
+async function chatPull(quiet){
+  if(!cloud.url){if(!quiet)toast('설정에서 클라우드 연결을 먼저 해주세요');return false;}
+  try{
+    const r=await gasJsonp({action:'inbox',n:300});
+    chatRows=(r&&r.rows)||[];
+    chatPulledAt=Date.now();
+    return true;
+  }catch(e){
+    if(!quiet)toast('받은 문자를 불러오지 못했습니다: '+e.message);
+    return false;
+  }
+}
+
+/* ---------- 학생 ↔ 번호 맞추기 ---------- */
+function studentByPhone(p){
+  const k=phoneKey8(p);
+  if(!k)return null;
+  return data.students.find(s=>phoneKey8(s.parentPhone)===k)||null;
+}
+function inboxOf(sid){
+  const s=studentById(sid); if(!s)return [];
+  const k=phoneKey8(s.parentPhone); if(!k)return [];
+  return chatRows.filter(r=>phoneKey8(r.phone)===k)
+    .map(r=>({dir:'in',ts:Date.parse(r.at)||0,text:r.text,id:r.id}));
+}
+function sentOf(sid){
+  const hist=(data.history||[]).filter(h=>h.studentId===sid)
+    .map(h=>({dir:'out',ts:h.ts||Date.parse(h.at)||0,text:h.message,id:h.id}));
+  const mine=chatOutOf(sid).map(x=>({dir:'out',ts:x.ts,text:x.text,id:x.id}));
+  return hist.concat(mine);
+}
+/* 보낸 것과 받은 것을 시간순으로 합친다 */
+function threadOf(sid){
+  return [...sentOf(sid),...inboxOf(sid)].sort((a,b)=>a.ts-b.ts);
+}
+function unreadOf(sid){
+  const seen=chatData().readAt[sid]||0;
+  return inboxOf(sid).filter(m=>m.ts>seen).length;
+}
+function markRead(sid){
+  const list=inboxOf(sid);
+  if(!list.length)return;
+  const newest=Math.max(...list.map(m=>m.ts));
+  const sd=chatData();
+  if((sd.readAt[sid]||0)<newest){sd.readAt[sid]=newest;save();}
+}
+
+/* ---------- 학생 명단 번호를 서버에 알려준다 (브리지가 개인 문자를 거르는 기준) ---------- */
+let phonesTimer=null;
+function pushPhones(){
+  if(!cloud.url)return;
+  clearTimeout(phonesTimer);
+  phonesTimer=setTimeout(async()=>{
+    const list=[...new Set(data.students.filter(s=>s.active)
+      .map(s=>digitsOnly(s.parentPhone)).filter(Boolean))];
+    try{await gasCall({action:'setPhones',list:list});}catch(e){}
+  },2000);
+}
+
+/* ---------- 화면 ---------- */
+function renderChatPage(){
+  const wrap=$('chatList'); if(!wrap)return;
+  const q=(($('chat_q')&&$('chat_q').value)||'').toLowerCase();
+  const onlyUnread=$('chat_unread')?$('chat_unread').checked:false;
+
+  const rowsFor=s=>{
+    const th=threadOf(s.id);
+    return {s,last:th.length?th[th.length-1]:null,un:unreadOf(s.id),n:th.length};
+  };
+  let list=data.students.filter(s=>s.active&&digitsOnly(s.parentPhone))
+    .map(rowsFor)
+    .filter(x=>!onlyUnread||x.un>0)
+    .filter(x=>!q||x.s.name.toLowerCase().includes(q)||(x.s.school||'').toLowerCase().includes(q))
+    .sort((a,b)=>(b.un>0)-(a.un>0)||((b.last&&b.last.ts)||0)-((a.last&&a.last.ts)||0)
+              ||a.s.name.localeCompare(b.s.name,'ko'));
+
+  const tot=data.students.filter(s=>s.active).reduce((n,s)=>n+unreadOf(s.id),0);
+  const cnt=$('chatUnreadCount'); if(cnt)cnt.textContent=tot?`안 읽음 ${tot}`:'안 읽음 없음';
+  const st=$('chatSyncAt');
+  if(st)st.textContent=chatPulledAt?`마지막 확인 ${fmtKST(new Date(chatPulledAt).toISOString())}`:'아직 안 불러옴';
+
+  if(!list.length){wrap.innerHTML='<div class="empty">표시할 학생이 없습니다.</div>';renderChatThread();return;}
+  wrap.innerHTML=list.map(x=>{
+    const prev=x.last?String(x.last.text).replace(/\s+/g,' ').slice(0,34):'주고받은 문자가 없습니다';
+    return `<div class="chatrow ${chatSel===x.s.id?'on':''}" onclick="chatOpen('${x.s.id}')">
+      <div class="cr1">
+        <b>${esc(x.s.name)}</b>
+        <span class="crg">${esc(x.s.grade||'')}${x.s.school?' · '+esc(x.s.school):''}</span>
+        ${x.un?`<span class="unread">${x.un}</span>`:''}
+        <span class="crt">${x.last?esc(fmtKST(new Date(x.last.ts).toISOString())):''}</span>
+      </div>
+      <div class="cr2">${x.last&&x.last.dir==='out'?'<span class="crm">보냄</span> ':''}${esc(prev)}</div>
+    </div>`;
+  }).join('');
+  renderChatThread();
+}
+
+function chatOpen(sid){
+  chatSel=sid; markRead(sid);
+  renderChatPage();
+  const pane=$('chatPane');
+  if(pane&&window.innerWidth<=760)pane.scrollIntoView({block:'start',behavior:'smooth'});
+  setTimeout(()=>{const b=$('chatBody');if(b)b.scrollTop=b.scrollHeight;},60);
+}
+
+function renderChatThread(){
+  const pane=$('chatPane'); if(!pane)return;
+  const s=studentById(chatSel);
+  if(!s){pane.innerHTML='<div class="empty">왼쪽에서 학생을 고르세요.</div>';return;}
+  const th=threadOf(s.id);
+  const bub=m=>`<div class="bub ${m.dir}">`
+    +`<div class="bt">${esc(m.text)}</div>`
+    +`<div class="bm">${esc(fmtKST(new Date(m.ts).toISOString()))}</div></div>`;
+  const bubbles=th.length?th.map(bub).join('')
+    :'<div class="empty">아직 주고받은 문자가 없습니다.</div>';
+  pane.innerHTML=`
+    <div class="chathead">
+      <b>${esc(s.name)}</b>
+      <span class="crg">${esc(s.parentLabel||'학부모님')} · ${esc(fmtPhone(s.parentPhone))}</span>
+      <button class="btn sm" style="margin-left:auto" onclick="openMemo('${s.id}','memo')">메모</button>
+    </div>
+    <div class="chatbody" id="chatBody">${bubbles}</div>
+    <div class="chatsend">
+      <textarea id="chatInput" placeholder="답장을 적고 ⌘Enter (또는 Ctrl+Enter)"
+        onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter')chatSend()"></textarea>
+      <button class="btn primary" onclick="chatSend()">보내기</button>
+    </div>
+    <div class="hint">${(function(){const n=(typeof senderLabel==='function')?senderLabel():'';
+      return n?`발신번호 <b>${esc(n)}</b> 로 나갑니다. `:'';})()}여기서 보낸 답장은 학생별 [보낸 이력]에는 남지 않습니다.</div>`;
+  const b=$('chatBody'); if(b)b.scrollTop=b.scrollHeight;
+}
+
+async function chatSend(){
+  if(chatBusy)return;
+  const s=studentById(chatSel); if(!s)return;
+  const ta=$('chatInput'); const raw=(ta&&ta.value||'').trim();
+  if(!raw){toast('보낼 내용을 적어주세요');return;}
+  const text=fillVars(raw,s);
+  const phone=digitsOnly(s.parentPhone);
+  if(!phone){toast('학부모 번호가 없습니다');return;}
+  chatBusy=true;
+  const batchId='c'+Date.now().toString(36);
+  try{
+    await gasCall({action:'enqueue',batchId:batchId,
+      items:[{name:s.name,phone:phone,message:text}]});
+    // 학생별 [보낸 이력] 에는 남기지 않는다 — 거기는 단체문자·개별 전송용
+    const sd=chatData();
+    sd.chatOut.push({id:uid(),studentId:s.id,ts:Date.now(),text:text});
+    trimChatOut();save();
+    if(ta)ta.value='';
+    toast('대기열에 올렸습니다');
+    renderChatPage();
+    setTimeout(()=>{if(typeof smsRefreshQueue==='function')smsRefreshQueue();},2500);
+  }catch(e){toast('실패: '+e.message);}
+  finally{chatBusy=false;}
+}
+
+/* ---------- 자동 갱신 ----------
+   문자함 탭을 실제로 보고 있을 때만 돈다.
+   다른 탭이거나 창이 뒤에 있으면 멈춘다 — 헛호출로 Apps Script 를 때리지 않기 위해. */
+const CHAT_POLL_MS=20000;
+let chatTimer=null, chatPolling=false;
+
+function chatVisible(){
+  const pg=$('page-chat');
+  return !!pg && pg.classList.contains('active') && document.visibilityState==='visible';
+}
+async function chatTick(){
+  if(chatPolling||!chatVisible()||!cloud.url)return;
+  chatPolling=true;
+  try{
+    const before=chatRows.length?chatRows[chatRows.length-1].id:'';
+    if(await chatPull(true)){
+      const after=chatRows.length?chatRows[chatRows.length-1].id:'';
+      // 답장을 읽던 중에 화면이 튀지 않게, 새 문자가 있을 때만 다시 그린다
+      if(before!==after)renderChatPage();
+      else{const st=$('chatSyncAt');
+        if(st)st.textContent=`마지막 확인 ${fmtKST(new Date(chatPulledAt).toISOString())}`;}
+    }
+  }finally{chatPolling=false;}
+}
+function startChatPoll(){
+  if(chatTimer)return;
+  chatTimer=setInterval(chatTick,CHAT_POLL_MS);
+  document.addEventListener('visibilitychange',()=>{if(chatVisible())chatTick();});
+}
+
+async function chatRefresh(){
+  const b=$('chatRefreshBtn'); if(b)b.textContent='불러오는 중…';
+  await chatPull(false);
+  if(b)b.textContent='새로고침';
+  renderChatPage();
+}
+function initChat(){
+  if(!$('chatList'))return;
+  renderChatPage();
+  if(cloud.url&&Date.now()-chatPulledAt>60000)chatPull(true).then(()=>renderChatPage());
+  startChatPoll();
+}
 
 /* ================= INIT ================= */
 function initAll(){
@@ -3136,7 +3601,7 @@ function initAll(){
   renderHallSelectors();resetStudentForm();renderPresetChips();renderStudents();refreshSchoolList();
   $('m_month').value=todayMonth();
   fillScoreSelectors();renderSettings();
-  initSms();renderNotesPage();
+  initSms();renderNotesPage();initChat();pushPhones();
 }
 function boot(){
   suppressPush=true;initAll();suppressPush=false;
