@@ -283,6 +283,23 @@ select.mini,input.mini{padding:6px 8px}
 }
 .built{overflow-wrap:anywhere}
 .histitem .built{max-height:none}
+/* 여러 줄 편집 창 */
+textarea.edit{width:100%;min-height:260px;max-height:56vh;padding:12px;border:1px solid var(--line);
+  border-radius:10px;background:#fbfaf7;font-family:inherit;
+  font-size:14.5px;line-height:1.8;white-space:pre-wrap;word-break:break-word;resize:vertical}
+textarea.edit:focus{outline:none;border-color:var(--accent)}
+textarea.edit.short{min-height:74px}
+.editfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px}
+/* 지시문 입력 칸 (상용구 만들기) */
+textarea.ask{width:100%;min-height:126px;max-height:40vh;padding:9px 11px;border:1px solid var(--line);
+  border-radius:9px;background:#fff;font-size:13.5px;line-height:1.7;white-space:pre-wrap;
+  word-break:break-word;resize:vertical}
+textarea.ask:focus{outline:none;border-color:var(--accent)}
+@media(max-width:720px){
+  textarea.edit{min-height:200px;max-height:44vh;font-size:16px}
+  textarea.ask{min-height:132px;font-size:16px}
+  .editfoot{justify-content:flex-end}
+}
 </style>
 </head>
 <body>
@@ -669,10 +686,13 @@ select.mini,input.mini{padding:6px 8px}
         <div id="tplManage"></div>
         <div class="divider"></div>
         <div class="field">
-          <label>새 상용구 — 한 줄로 적으면 AI가 완성합니다</label>
-          <div class="row">
-            <input id="tplAiPrompt" placeholder="예: 다음 주 화요일 휴강, 목요일 보강 안내" style="flex:1 1 300px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+          <label>새 상용구 만들기 <span class="small">— 원하는 만큼 길게 적으세요. 지시문처럼 조건을 나열해도 됩니다.</span></label>
+          <textarea id="tplAiPrompt" class="ask" oninput="onTplPromptInput()"
+            placeholder="예)&#10;다음 주 화요일 휴강, 목요일 같은 시간 보강 안내.&#10;보강일에 교재를 꼭 챙겨 오도록 한 줄 넣어주세요.&#10;결석하면 따로 연락 달라는 말도 넣어주세요."></textarea>
+          <div class="row" style="margin-top:8px">
             <button class="btn blue" onclick="aiDraftTemplate()">✨ 상용구 만들기</button>
+            <button class="btn" onclick="clearTplPrompt()">지우기</button>
+            <span class="small">적어둔 내용은 저장돼서 다시 열어도 남아 있습니다.</span>
           </div>
         </div>
       </div>
@@ -848,6 +868,22 @@ select.mini,input.mini{padding:6px 8px}
   </div>
 </div>
 
+<!-- 여러 줄 편집 창 -->
+<div class="modal-bg" id="editBg">
+  <div class="modal" style="width:700px">
+    <h3 id="editTitle"></h3>
+    <div class="small" id="editHint" style="margin:-8px 0 11px"></div>
+    <textarea id="editArea" class="edit" oninput="editLen()"></textarea>
+    <div class="editfoot">
+      <span class="small" id="editLenBox"></span>
+      <div class="row" style="margin:0">
+        <button class="btn ghost" onclick="closeTextModal()">취소</button>
+        <button class="btn primary" id="editOk">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- generic confirm modal -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
@@ -873,7 +909,7 @@ const defaultData=()=>({
   presets:[],
   templates:[],
   aiModels:[],
-  sms:{bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{},readAt:{},chatOut:[]},
+  sms:{bulkBody:'',eachHead:'',eachTail:'',memo:{},built:{},readAt:{},chatOut:[],tplPrompt:'',draftAsk:''},
   notes:[],
   history:[],
   students:[],
@@ -2262,10 +2298,12 @@ function deleteNote(id,after){
 }
 function editNote(id,after){
   const n=allNotes().find(x=>x.id===id); if(!n)return;
-  const v=prompt('메모를 수정합니다.',n.text);
-  if(v===null)return;
-  if(!v.trim()){deleteNote(id,after);return;}
-  n.text=v.trim(); save(); afterNoteChange(after);
+  textModal('메모 수정',
+    '여러 줄로 적어도 됩니다. 비우고 저장하면 메모가 지워집니다.',
+    n.text,v=>{
+      if(!v.trim()){deleteNote(id,after);return;}
+      n.text=v.trim(); save(); afterNoteChange(after);
+    },{short:true,placeholder:'메모 내용'});
 }
 function afterNoteChange(after){
   if(after==='modal')renderMemoModal();
@@ -2851,22 +2889,72 @@ function renderVarChips(){
     SMS_VARS.map(v=>`<button class="qbtn" onclick="insertVar('${v}')">{${v}}</button>`).join('');
 }
 
+/* ---------- 여러 줄 편집 창 ----------
+   브라우저 prompt() 는 한 줄짜리라 줄바꿈이 보이지 않는다.
+   문자 본문은 줄바꿈이 곧 결과물이므로 보면서 고칠 수 있어야 한다. */
+let _textCb=null;
+function textModal(title,hint,value,cb,opts){
+  opts=opts||{};
+  $('editTitle').textContent=title;
+  const h=$('editHint');
+  h.innerHTML=hint||'';h.style.display=hint?'':'none';
+  const ta=$('editArea');
+  ta.value=value||'';
+  ta.placeholder=opts.placeholder||'';
+  ta.className='edit'+(opts.short?' short':'');
+  $('editOk').textContent=opts.okText||'저장';
+  _textCb=cb;
+  $('editBg').classList.add('show');
+  editLen();
+  setTimeout(()=>{
+    ta.focus();
+    if(opts.selectAll){ta.select();return;}
+    ta.setSelectionRange(0,0);ta.scrollTop=0;   // 첫 줄부터 보이게
+  },40);
+}
+function closeTextModal(){$('editBg').classList.remove('show');_textCb=null;}
+function editLen(){
+  const box=$('editLenBox');if(!box)return;
+  const v=$('editArea').value||'';
+  box.textContent=v?`${v.length}자 · ${v.split('\n').length}줄`:'';
+}
+function submitTextModal(){
+  const cb=_textCb,v=$('editArea').value;
+  closeTextModal();
+  if(cb)cb(v);
+}
+function initTextModal(){
+  const ok=$('editOk');if(!ok||ok._wired)return;
+  ok._wired=1;
+  ok.onclick=submitTextModal;
+  $('editBg').addEventListener('mousedown',e=>{if(e.target.id==='editBg')closeTextModal();});
+  $('editArea').addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();closeTextModal();}
+    else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();submitTextModal();}
+  });
+}
+
 /* ---------- 상용구 ---------- */
+function renderTemplateChips(){
+  const chips=$('tplChips');if(!chips)return;
+  chips.innerHTML=(data.templates||[]).length
+    ?data.templates.map(t=>`<button class="tplchip" onclick="useTemplate('${t.id}')">${esc(t.name)}</button>`).join('')
+    :'<span class="small">저장된 상용구가 없습니다. 아래 [상용구 관리]에서 만들어 보세요.</span>';
+}
 function renderTemplates(){
-  const chips=$('tplChips');
-  if(chips){
-    chips.innerHTML=(data.templates||[]).length
-      ?data.templates.map(t=>`<button class="tplchip" onclick="useTemplate('${t.id}')">${esc(t.name)}</button>`).join('')
-      :'<span class="small">저장된 상용구가 없습니다. 아래 [상용구 관리]에서 만들어 보세요.</span>';
-  }
+  renderTemplateChips();
+  const ask=$('tplAiPrompt');
+  if(ask&&document.activeElement!==ask)ask.value=smsData().tplPrompt||'';
   const man=$('tplManage');
   if(man){
     man.innerHTML=(data.templates||[]).length
       ?(data.templates.map(t=>`<div class="settrow" style="align-items:flex-start">
-          <label style="width:150px;padding-top:6px">${esc(t.name)}</label>
+          <input value="${esc(t.name)}" style="width:150px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"
+                 oninput="renameTemplate('${t.id}',this.value)" placeholder="이름">
           <textarea class="msg" style="flex:1 1 300px;min-height:74px" oninput="updateTemplate('${t.id}',this.value)">${esc(t.body)}</textarea>
           <div style="display:flex;flex-direction:column;gap:5px">
             <button class="btn sm" onclick="useTemplate('${t.id}')">불러오기</button>
+            <button class="btn sm" onclick="editTemplate('${t.id}')">크게 열기</button>
             <button class="btn sm danger" onclick="removeTemplate('${t.id}')">삭제</button>
           </div></div>`).join(''))
       :'<div class="empty">상용구가 없습니다.</div>';
@@ -2880,6 +2968,18 @@ function useTemplate(id){
 function updateTemplate(id,v){
   const t=(data.templates||[]).find(x=>x.id===id);if(!t)return;t.body=v;save();
 }
+function renameTemplate(id,v){
+  const t=(data.templates||[]).find(x=>x.id===id);if(!t)return;
+  t.name=v.trim()||'이름없음';save();
+  renderTemplateChips();   // 목록 전체를 다시 그리면 치던 칸에서 커서가 튄다
+}
+function editTemplate(id){
+  const t=(data.templates||[]).find(x=>x.id===id);if(!t)return;
+  textModal('상용구 수정 — '+t.name,
+    '줄바꿈은 그대로 문자에 나갑니다. 중괄호 항목은 보낼 때 학생마다 자동으로 바뀝니다.',
+    t.body,v=>{t.body=v;save();renderTemplates();toast('수정했습니다');},
+    {placeholder:'상용구 본문'});
+}
 function removeTemplate(id){
   confirmModal('상용구 삭제','이 상용구를 지울까요?',()=>{
     data.templates=(data.templates||[]).filter(x=>x.id!==id);save();renderTemplates();toast('삭제했습니다');});
@@ -2887,11 +2987,16 @@ function removeTemplate(id){
 function saveAsTemplate(){
   const body=($('smsBody').value||'').trim();
   if(!body){toast('본문이 비어 있습니다');return;}
-  const name=prompt('상용구 이름을 정해주세요.','예: 휴강 안내');
-  if(name===null)return;
-  data.templates=data.templates||[];
-  data.templates.push({id:uid(),name:(name.trim()||'이름없음'),body});
-  save();renderTemplates();toast('상용구로 저장했습니다');
+  textModal('상용구로 저장','이름만 정해주세요. 본문은 지금 적어둔 그대로 저장됩니다.',
+    firstLine(body,18),name=>{
+      data.templates=data.templates||[];
+      data.templates.push({id:uid(),name:(name.trim()||'이름없음'),body});
+      save();renderTemplates();toast('상용구로 저장했습니다');
+    },{short:true,selectAll:true,okText:'저장',placeholder:'예: 휴강 안내'});
+}
+function firstLine(t,n){
+  const l=String(t||'').split('\n').map(x=>x.trim()).find(x=>x)||'';
+  return n&&l.length>n?l.slice(0,n):l;
 }
 
 /* ---------- 개별 메모 ---------- */
@@ -2942,11 +3047,12 @@ function saveEachFix(){
   const sd=smsData();sd.eachHead=$('eachHead').value;sd.eachTail=$('eachTail').value;save();renderSmsPreview();
 }
 function editBuilt(id){
-  const sd=smsData();
-  const cur=sd.built[id]||'';
-  const v=prompt('보낼 본문을 직접 수정합니다.',cur);
-  if(v===null)return;
-  sd.built[id]=v;save();renderSmsEach();renderSmsPreview();
+  const sd=smsData();const s=studentById(id);
+  textModal('본문 직접 수정 — '+(s?s.name:''),
+    '줄바꿈이 그대로 문자에 나갑니다. 머리말과 맺음말은 여기에 넣지 마세요 — 위의 칸이 자동으로 붙입니다.',
+    sd.built[id]||'',
+    v=>{sd.built[id]=v;save();renderSmsEach();renderSmsPreview();toast('수정했습니다');},
+    {placeholder:'보낼 본문을 적어주세요.'});
 }
 function clearEachBuilt(){
   confirmModal('정리 결과 비우기','AI가 만든 본문을 모두 지웁니다. 메모는 남습니다.',()=>{
@@ -3013,20 +3119,38 @@ async function aiPolishBulk(){
     $('smsBody').value=txt;onBulkInput();toast('다듬었습니다');
   }catch(e){toast('AI 실패: '+e.message);}
 }
-async function aiDraftBulk(){
-  const p=prompt('무엇을 안내할까요? 한 줄로 적어주세요.','예: 이번 주 금요일 휴강, 다음 주 월요일 보강');
-  if(p===null||!p.trim())return;
+function aiDraftBulk(){
+  textModal('초안 만들기',
+    '무엇을 안내할지 적어주세요. 길게 적어도 됩니다 — 조건을 줄바꿈해 나열하면 그대로 반영합니다.',
+    smsData().draftAsk||'',
+    v=>{
+      const p=(v||'').trim();
+      if(!p){toast('내용을 적어주세요');return;}
+      smsData().draftAsk=p;save();
+      runDraftBulk(p);
+    },
+    {okText:'초안 만들기',
+     placeholder:'예)\n이번 주 금요일 휴강, 다음 주 월요일 같은 시간 보강.\n보강일에 교재를 챙겨 오도록 안내해 주세요.'});
+}
+async function runDraftBulk(p){
   toast('초안을 만드는 중…');
   try{
     const txt=await aiChat([
       {role:'system',content:aiBulkSystem()},
-      {role:'user',content:p.trim()}
+      {role:'user',content:p}
     ],{temperature:0.5});
     setSmsMode('bulk');$('smsBody').value=txt;onBulkInput();toast('초안을 만들었습니다');
   }catch(e){toast('AI 실패: '+e.message);}
 }
 function aiBulkSystem(){
   return (data.settings.aiSystemBulk||'').trim()||DEFAULT_AI_BULK;
+}
+function onTplPromptInput(){
+  smsData().tplPrompt=$('tplAiPrompt').value;save();
+}
+function clearTplPrompt(){
+  const t=$('tplAiPrompt');if(!t)return;
+  t.value='';smsData().tplPrompt='';save();t.focus();
 }
 async function aiDraftTemplate(){
   const p=($('tplAiPrompt').value||'').trim();
@@ -3038,8 +3162,11 @@ async function aiDraftTemplate(){
       {role:'user',content:p}
     ],{temperature:0.5});
     data.templates=data.templates||[];
-    data.templates.push({id:uid(),name:p.slice(0,18),body:txt});
-    save();renderTemplates();$('tplAiPrompt').value='';toast('상용구를 추가했습니다');
+    // 이름은 첫 줄에서 딴다 — 여러 줄 지시문을 통째로 자르면 이름이 엉망이 된다
+    data.templates.push({id:uid(),name:(firstLine(p,18)||'새 상용구'),body:txt});
+    save();renderTemplates();
+    $('tplAiPrompt').value='';smsData().tplPrompt='';save();
+    toast('상용구를 추가했습니다 — 이름은 왼쪽 칸에서 고칠 수 있습니다');
   }catch(e){toast('AI 실패: '+e.message);}
 }
 async function loadAiModels(){
@@ -3356,6 +3483,7 @@ function appendAiRails(){
   checkAiTemplate();toast('구조 규칙을 덧붙였습니다');
 }
 function initSms(){
+  initTextModal();
   migrateAiTemplate();
   const sd=smsData();
   if($('smsBody'))$('smsBody').value=sd.bulkBody||'';
