@@ -839,6 +839,18 @@ textarea.ask:focus{outline:none;border-color:var(--accent)}
           <button class="btn ghost" onclick="resetAiTemplateBulk()">단체 지시문 되돌리기</button></div>
       </div>
 
+      <!-- 세 조각 버전 확인 -->
+      <div class="card">
+        <h3>버전 확인</h3>
+        <div class="small" style="margin-bottom:10px">앱·시트·브리지는 각각 따로 올려야 합니다.
+          셋 중 하나만 빠져도 겉보기엔 멀쩡한데 옛 코드가 돕니다. 여기서 한 번에 확인하세요.</div>
+        <div id="verRows"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn blue" onclick="checkVersions()">연결 점검</button>
+          <span class="small" id="verHint"></span>
+        </div>
+      </div>
+
       <div class="card">
         <h3>데이터 백업 / 복원</h3>
         <div class="small" style="margin-bottom:10px">데이터는 이 브라우저에만 저장됩니다. 컴퓨터를 바꾸거나 브라우저 정리 시 사라질 수 있으니 <b>정기적으로 백업 파일을 내려받으세요.</b></div>
@@ -899,7 +911,8 @@ textarea.ask:focus{outline:none;border-color:var(--accent)}
 <script>
 /* ================= DATA LAYER ================= */
 const KEY='academy_data_v1';
-const APP_VERSION='빌드 20 · 2026-09-07 (안 읽음 배지)';
+const APP_VERSION='빌드 22 · 2026-10-03 (중복 발송 차단)';
+const APP_BUILD=22;
 const WD=['일','월','화','수','목','금','토'];
 const defaultData=()=>({
   settings:{academyName:'우리 학원',deduction:5000,splitRatio:0.5,taxRate:0.033,cardRate:0.03,sessionsPerMonth:4,
@@ -1642,6 +1655,7 @@ const APPS_SCRIPT=`/***** 학생 종합 관리 — Apps Script 백엔드 (문자
 
 var SHEET_NAME = 'DATA';    // 기존 전체 데이터(JSON) 시트
 var QUEUE_SHEET = 'QUEUE';  // 문자 발송 대기열 / 이력
+var GAS_BUILD = 22;         // 재배포가 실제로 됐는지 앱에서 확인하는 용도
 var TOKEN = '';             // 웹앱 설정의 '암호'와 동일하게 (안 쓰면 빈칸)
 
 var QCOLS = ['id','createdAt','name','phone','message','status','sentAt','error','batchId'];
@@ -1656,6 +1670,7 @@ function doGet(e) {
     // 맥 브리지 전용 (JSONP 아님, 순수 JSON)
     if (action === 'claim') {
       requireBridge(p.token);
+      noteBridge_(p.build);
       return raw(claimPending(Number(p.limit) || 10));
     }
     if (action === 'ping') {
@@ -1673,6 +1688,9 @@ function doGet(e) {
     }
     if (TOKEN && p.token !== TOKEN) return reply(cb, { error: 'unauthorized' });
 
+    if (action === 'version') {
+      return reply(cb, { ok: true, gasBuild: GAS_BUILD, bridge: bridgeSeen_() });
+    }
     if (action === 'models') {
       return reply(cb, listModels());
     }
@@ -2191,6 +2209,28 @@ function AI테스트() {
 }
 
 /* ================= 공통 ================= */
+
+/* 브리지가 마지막으로 연결한 시각과 빌드. claim 은 7초마다 오므로
+   매번 쓰면 속성 쿼터가 아깝다 — 2분에 한 번, 또는 빌드가 바뀔 때만 쓴다. */
+function noteBridge_(build) {
+  if (!build) return;
+  try {
+    var ps = PropertiesService.getScriptProperties();
+    var cur = bridgeSeen_();
+    var now = Date.now();
+    if (cur && String(cur.build) === String(build) &&
+        now - Date.parse(cur.at) < 120000) return;
+    ps.setProperty('BRIDGE_SEEN', JSON.stringify(
+      { build: Number(build) || 0, at: new Date(now).toISOString() }));
+  } catch (e) {}
+}
+
+function bridgeSeen_() {
+  try {
+    var v = PropertiesService.getScriptProperties().getProperty('BRIDGE_SEEN');
+    return v ? JSON.parse(v) : null;
+  } catch (e) { return null; }
+}
 
 function requireBridge(t) {
   var bt = PropertiesService.getScriptProperties().getProperty('BRIDGE_TOKEN');
@@ -2906,6 +2946,45 @@ function renderVarChips(){
     SMS_VARS.map(v=>`<button class="qbtn" onclick="insertVar('${v}')">{${v}}</button>`).join('');
 }
 
+/* ---------- 버전 확인 ----------
+   올린 줄 알았는데 안 올라간 일이 반복됐다(앱·시트·브리지 각각 따로 올려야 함).
+   셋의 빌드 번호를 한 줄씩 보여준다. 숫자가 다르면 그 조각이 옛날 것이다. */
+function verRow(name, build, want, extra){
+  const ok = build != null && Number(build) === want;
+  const mark = build == null ? '<span style="color:var(--muted)">?</span>'
+    : ok ? '<span style="color:#1a7f37;font-weight:700">OK</span>'
+         : '<span style="color:#b3261e;font-weight:700">옛 버전</span>';
+  const got = build == null ? '확인 못 함' : ('빌드 ' + build);
+  return `<div class="settrow" style="align-items:center">
+    <label style="width:110px">${name}</label>
+    <div style="flex:1 1 auto;min-width:0">${got}${extra?` <span class="small">${extra}</span>`:''}</div>
+    <div style="width:70px;text-align:right">${mark}</div></div>`;
+}
+async function checkVersions(){
+  const box=$('verRows'), hint=$('verHint');
+  if(hint)hint.innerHTML='<span class="aiwait"></span> 확인 중…';
+  let gas=null, bridge=null, seenAt='', err='';
+  try{
+    const r=await gasJsonp({action:'version'});
+    if(r.error)throw new Error(r.error);
+    gas=r.gasBuild;
+    if(r.bridge){bridge=r.bridge.build;seenAt=r.bridge.at||'';}
+  }catch(e){err=e.message;}
+  const ago=seenAt?fmtKST(seenAt):'';
+  box.innerHTML =
+    verRow('앱 (이 화면)', APP_BUILD, APP_BUILD) +
+    verRow('시트 (Apps Script)', gas, APP_BUILD, gas==null?'재배포했는지 확인하세요':'') +
+    verRow('브리지 (맥)', bridge, APP_BUILD,
+      bridge==null?'서버 켜기.command 를 실행했는지 확인하세요':(ago?('마지막 연결 '+ago):''));
+  let msg='';
+  if(err)msg='시트에 연결하지 못했습니다: '+err;
+  else if(gas!==APP_BUILD)msg='시트가 옛 버전입니다 — Apps Script 를 <b>새 버전으로 재배포</b>하세요.';
+  else if(bridge==null)msg='브리지가 아직 연결한 적이 없습니다 — 맥에서 <b>서버 켜기.command</b> 를 실행하세요.';
+  else if(bridge!==APP_BUILD)msg='브리지가 옛 버전입니다 — 맥에서 <b>서버 켜기.command</b> 를 실행하세요(파일 복사만으론 안 됩니다).';
+  else msg='셋 다 최신입니다.';
+  if(hint)hint.innerHTML=msg;
+}
+
 /* ---------- 여러 줄 편집 창 ----------
    브라우저 prompt() 는 한 줄짜리라 줄바꿈이 보이지 않는다.
    문자 본문은 줄바꿈이 곧 결과물이므로 보면서 고칠 수 있어야 한다. */
@@ -3501,6 +3580,7 @@ function appendAiRails(){
 }
 function initSms(){
   initTextModal();
+  if($('verRows'))setTimeout(()=>{try{checkVersions();}catch(e){}},1200);
   migrateAiTemplate();
   const sd=smsData();
   if($('smsBody'))$('smsBody').value=sd.bulkBody||'';
