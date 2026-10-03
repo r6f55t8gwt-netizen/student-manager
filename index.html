@@ -1811,7 +1811,11 @@ function enqueue(items, batchId) {
 
 /* 브리지가 가져갔지만 결과를 못 보낸 줄을 되살린다.
    맥이 잠들거나 브리지가 재시작되면 'sending' 인 채로 영영 남아 다시는 발송되지 않았다. */
-var STALE_SENDING_MIN = 10;
+// 되살리기까지의 시간. 짧으면 '아직 보고 중' 인 줄을 다시 보내게 된다.
+// 10분이었다가 실제로 중복 발송이 났다(2026-10-03). 넉넉히 늦춘다.
+var STALE_SENDING_MIN = 45;
+// 한 줄을 되살리는 횟수 상한. 넘으면 다시 보내지 않고 error 로 끝낸다.
+var MAX_REVIVE = 2;
 
 function reviveStuck_(sh, vals) {
   var cutoff = Date.now() - STALE_SENDING_MIN * 60 * 1000;
@@ -1820,8 +1824,21 @@ function reviveStuck_(sh, vals) {
     if (String(vals[i][5]) !== 'sending') continue;
     var t = Date.parse(String(vals[i][6] || ''));   // 가져간 시각
     if (!isNaN(t) && t > cutoff) continue;          // 아직 처리 중일 수 있다
+
+    // 몇 번째 되살리기인지 비고란에 적어둔다. 상한을 넘으면 더 보내지 않는다.
+    // 문자는 되돌릴 수 없으므로, 의심스러우면 '안 보냄' 쪽으로 끝낸다.
+    var note = String(vals[i][7] || '');
+    var m = note.match(/되돌림 (\d+)회/);
+    var tries = m ? Number(m[1]) : 0;
+    if (tries >= MAX_REVIVE) {
+      sh.getRange(i + 2, 6).setValue('error');
+      sh.getRange(i + 2, 8).setValue(
+        '되돌림 ' + tries + '회 — 더 보내지 않습니다. 실제로 갔는지 확인 후 손으로 다시 보내세요');
+      vals[i][5] = 'error';
+      continue;
+    }
     sh.getRange(i + 2, 6).setValue('pending');
-    sh.getRange(i + 2, 8).setValue('브리지가 응답하지 않아 다시 대기열에 넣었습니다');
+    sh.getRange(i + 2, 8).setValue('브리지가 응답하지 않아 다시 대기열에 넣었습니다 (되돌림 ' + (tries + 1) + '회)');
     vals[i][5] = 'pending';
     n++;
   }
